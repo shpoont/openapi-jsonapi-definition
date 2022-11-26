@@ -1,0 +1,108 @@
+x-anchors-operation: &operation
+  - summary
+  - operationId
+  - tags
+  - description
+  - externalDocs
+  - deprecated
+  - security
+  - servers
+  - parameters
+  - requestBody
+  - responses
+  - callbacks
+x-anchors-schema: &schema
+  - title
+  - deprecated
+  - description
+  - externalDocs
+  - type
+  - required
+  - readOnly
+  - writeOnly
+  - nullable
+  - default
+
+  - oneOf
+  - anyOf
+  - allOf
+  - discriminator
+  - not
+
+  - multipleOf
+  - maximum
+  - exclusiveMaximum
+  - minimum
+  - exclusiveMinimum
+
+  - maxLength
+  - minLength
+  - pattern
+  - format
+
+  - enum
+
+  - items
+  - maxItems
+  - minItems
+  - uniqueItems
+
+  - properties
+  - maxProperties
+  - minProperties
+  - additionalProperties
+
+  - xml
+
+  - example
+root:
+  - openapi
+  - info
+  - externalDocs
+  - tags
+  - x-tagGroups
+  - servers
+  - paths
+  - components
+get: *operation
+post: *operation
+put: *operation
+patch: *operation
+delete: *operation
+parameters:
+  - name
+  - in
+  - description
+  - deprecated
+  - required
+  - allowEmptyValue
+  - schema
+  - content
+  - style
+  - explode
+  - allowReserved
+  - example
+  - examples
+requestBody:
+  - description
+  - required
+  - content
+responses:
+  - description
+  - headers
+  - content
+  - links
+content: []
+components:
+  - securitySchemes
+  - schemas
+  - parameters
+  - requestBodies
+  - headers
+  - links
+  - callbacks
+  - responses
+  - examples
+schema: *schema
+schemas: *schema
+properties: *schema

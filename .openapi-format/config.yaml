@@ -1,0 +1,6 @@
+# https://github.com/thim81/openapi-format#openapi-format-cli-options
+sortFile: .openapi-format/sort.yaml
+filterFile: .openapi-format/filter.yaml
+casingFile: .openapi-format/casing.yaml
+sortComponentsFile: .openapi-format/sort-components.yaml
+lineWidth: -1

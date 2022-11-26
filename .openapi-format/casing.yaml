@@ -1,0 +1,13 @@
+# https://github.com/thim81/openapi-format#openapi-formatting-configuration-options
+operationId: camelCase
+
+componentsParametersCookie: camelCase
+componentsParametersPath: camelCase
+componentsParametersQuery: camelCase
+componentsParametersHeader: camelCase
+componentsSchemas: camelCase
+componentsExamples: camelCase
+componentsHeaders: TrainCase
+componentsResponses: camelCase
+componentsRequestBodies: camelCase
+componentsSecuritySchemes: camelCase
