@@ -1,0 +1,2885 @@
+openapi: 3.0.0
+info:
+  title: 'OpenAPI 3.0.0 Specification for JSON:API v1.1'
+  version: 0.0.1
+  description: '[OpenAPI 3.0.0](https://spec.openapis.org/oas/v3.0.0) Specification for [JSON:API v1.1](https://jsonapi.org/format/1.1/)'
+  contact:
+    name: Leon(id) Komarovsky
+    email: leonid@komarovsky.info
+tags:
+  - name: Collections
+  - name: Relationships
+  - name: Resources
+servers:
+  - url: 'http://127.0.0.1:3100'
+    description: Mock Server
+paths:
+  '/{collection}':
+    parameters:
+      - $ref: '#/components/parameters/collection'
+    get:
+      summary: Fetch Collection
+      operationId: getCollection
+      tags:
+        - Collections
+      description: Fetch collection of resources.
+      parameters:
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/filter'
+      requestBody:
+        description: |-
+          ### 8.1 Fetching Resources
+
+          A server **MUST** support fetching resource data for every URL provided as:
+
+          - a `self` link as part of the top-level links object
+          - a `self` link as part of a resource-level links object
+          - a `related` link as part of a relationship-level links object
+
+          The following request fetches a collection of articles:
+          ```http
+          GET /articles HTTP/1.1
+          Accept: application/vnd.api+json
+          ```
+
+          JSON:API v1.1 spec: [8.1 Fetching Resources](https://jsonapi.org/format/1.1/#fetching-resources)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: |-
+            ### 8.1.1.1 200 OK
+
+            A server **MUST** respond to a successful request to fetch an individual resource or resource collection with a `200 OK` response.
+
+            A server **MUST** respond to a successful request to fetch a resource collection with an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) or an empty array (`[]`) as the response document’s primary data.
+
+            For example, a GET request to a collection of articles could return:
+            ```http
+            HTTP/1.1 200 OK
+            Content-Type: application/vnd.api+json
+
+            {
+              "links": {
+                "self": "http://example.com/articles"
+              },
+              "data": [{
+                "type": "articles",
+                "id": "1",
+                "attributes": {
+                  "title": "JSON:API paints my bikeshed!"
+                }
+              }, {
+                "type": "articles",
+                "id": "2",
+                "attributes": {
+                  "title": "Rails is Omakase"
+                }
+              }]
+            }
+            ```
+
+            A similar response representing an empty collection would be:
+            ```http
+            HTTP/1.1 200 OK
+            Content-Type: application/vnd.api+json
+
+            {
+              "links": {
+                "self": "http://example.com/articles"
+              },
+              "data": []
+            }
+            ```
+
+            JSON:API v1.1 spec: [8.1.1.1 200 OK](https://jsonapi.org/format/1.1/#fetching-resources-responses-200)
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/successDocument'
+              examples:
+                articlesCollection:
+                  value:
+                    links:
+                      self: 'http://example.com/articles'
+                    data:
+                      - type: articles
+                        id: '1'
+                        attributes:
+                          title: 'JSON:API paints my bikeshed!'
+                      - type: articles
+                        id: '2'
+                        attributes:
+                          title: Rails is Omakase
+                emptyCollection:
+                  value:
+                    data: []
+                    links:
+                      self: 'http://example.com/articles'
+        default:
+          description: |-
+            ### 8.1.1.3 Other Responses
+
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include error details with [error responses](https://jsonapi.org/format/1.1/#errors).
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with [HTTP semantics](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [8.1.1.3 Other Responses](https://jsonapi.org/format/1.1/#fetching-resources-responses-other)
+    post:
+      summary: Create Resource
+      operationId: createResource
+      tags:
+        - Resources
+      description: Create a new resource.
+      parameters:
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/fields'
+      requestBody:
+        description: |
+          ### 9.1 Creating Resources
+
+          A resource can be created by sending a `POST` request to a URL that represents a collection of resources. The request **MUST** include a single [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) as primary data. The [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) **MUST** contain at least a `type` member.
+
+          For instance, a new photo might be created with the following request:
+          ```http
+          POST /photos HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": {
+              "type": "photos",
+              "attributes": {
+                "title": "Ember Hamster",
+                "src": "http://example.com/images/productivity.png"
+              },
+              "relationships": {
+                "photographer": {
+                  "data": { "type": "people", "id": "9" }
+                }
+              }
+            }
+          }
+          ```
+
+          If a relationship is provided in the `relationships` member of the [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), its value **MUST** be a relationship object with a `data` member. The value of this key represents the [linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage) the new resource is to have.
+
+          JSON:API v1.1 spec: [9.1 Creating Resources](https://jsonapi.org/format/1.1/#crud-creating)
+
+          ###  9.1.1 Client-Generated IDs
+
+          A server **MAY** accept a client-generated ID along with a request to create a resource. An ID **MUST** be specified with an `id` key, the value of which **MUST** be a universally unique identifier. The client **SHOULD** use a properly generated and formatted *UUID* as described in RFC 4122 [[RFC4122](http://tools.ietf.org/html/rfc4122.html)].
+
+          > NOTE: In some use-cases, such as importing data from another source, it may be possible to use something other than a UUID that is still guaranteed to be globally unique. Do not use anything other than a UUID unless you are 100% confident that the strategy you are using indeed generates globally unique identifiers.
+
+          For example:
+
+          ```http
+          POST /photos HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": {
+              "type": "photos",
+              "id": "550e8400-e29b-41d4-a716-446655440000",
+              "attributes": {
+                "title": "Ember Hamster",
+                "src": "http://example.com/images/productivity.png"
+              }
+            }
+          }
+          ```
+
+          A server **MUST** return `403 Forbidden` in response to an unsupported request to create a resource with a client-generated ID.
+
+          JSON:API v1.1 spec: [9.1.1 Client-Generated IDs](https://jsonapi.org/format/1.1/#crud-creating-client-ids)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+            examples:
+              createPhoto:
+                value:
+                  data:
+                    type: photos
+                    attributes:
+                      title: Ember Hamster
+                      src: 'http://example.com/images/productivity.png'
+                    relationships:
+                      photographer:
+                        data:
+                          type: people
+                          id: '9'
+              createPhotoWithClientGeneratedId:
+                value:
+                  data:
+                    type: photos
+                    id: 550e8400-e29b-41d4-a716-446655440000
+                    attributes:
+                      title: Ember Hamster
+                      src: 'http://example.com/images/productivity.png'
+      responses:
+        '201':
+          description: |-
+            ### 9.1.2.1 201 Created
+
+            If the requested resource has been created successfully and the server changes the resource in any way (for example, by assigning an `id`), the server **MUST** return a `201 Created` response and a document that contains the resource as primary data.
+
+            The response **SHOULD** include a `Location` header identifying the location of the newly created resource, in order to comply with [RFC 7231](http://tools.ietf.org/html/rfc7231#section-6.3.2).
+
+            If the [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) returned by the response contains a `self` key in its `links` member and a `Location` header is provided, the value of the `self` member **MUST** match the value of the `Location` header.
+
+            ```http
+            HTTP/1.1 201 Created
+            Location: http://example.com/photos/550e8400-e29b-41d4-a716-446655440000
+            Content-Type: application/vnd.api+json
+
+            {
+              "data": {
+                "type": "photos",
+                "id": "550e8400-e29b-41d4-a716-446655440000",
+                "attributes": {
+                  "title": "Ember Hamster",
+                  "src": "http://example.com/images/productivity.png"
+                },
+                "links": {
+                  "self": "http://example.com/photos/550e8400-e29b-41d4-a716-446655440000"
+                }
+              }
+            }
+            ```
+
+            A server **MAY** return a `201 Created` response with a document that contains no primary data if the requested resource has been created successfully and the server does not change the resource in any way (for example, by assigning an `id` or `createdAt` attribute). Other top-level members, such as [meta](https://jsonapi.org/format/1.1/#document-meta), could be included in the response document.
+
+            > Note: Only servers that accept [Client-Generated IDs](https://jsonapi.org/format/1.1/#crud-creating-client-ids) can avoid assigning an `id` to a new resource.
+
+            JSON:API v1.1 spec: [9.1.2.1 201 Created](https://jsonapi.org/format/1.1/#crud-creating-responses-201)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+              examples:
+                createPhoto:
+                  value:
+                    data:
+                      type: photos
+                      id: 550e8400-e29b-41d4-a716-446655440000
+                      attributes:
+                        title: Ember Hamster
+                        src: 'http://example.com/images/productivity.png'
+                      links:
+                        self: 'http://example.com/photos/550e8400-e29b-41d4-a716-446655440000'
+        '202':
+          description: |-
+            ### 9.1.2.2 202 Accepted
+
+            If a request to create a resource has been accepted for processing, but the processing has not been completed by the time the server responds, the server **MUST** return a `202 Accepted` status code.
+
+            JSON:API v1.1 spec: [9.1.2.2 202 Accepted](https://jsonapi.org/format/1.1/#crud-creating-responses-202)
+        '204':
+          description: |-
+            ### 9.1.2.3 204 No Content
+
+            If the requested resource has been created successfully and the server does not change the resource in any way (for example, by assigning an `id` or `createdAt` attribute), the server **MUST** return either a `201 Created` status code and response document or a `204 No Content` status code with no response document.
+
+            JSON:API v1.1 spec: [9.1.2.3 204 No Content](https://jsonapi.org/format/1.1/#crud-creating-responses-204)
+        '403':
+          description: |-
+            ### 9.1.1 Client-Generated IDs
+
+            A server **MUST** return `403 Forbidden` in response to an unsupported request to create a resource with a client-generated ID.
+
+            JSON:API v1.1 spec: [9.1.1 Client-Generated IDs](https://jsonapi.org/format/1.1/#crud-creating-client-ids)
+
+            ### 9.1.2.4 403 Forbidden
+
+            A server **MAY** return `403 Forbidden` in response to an unsupported request to create a resource.
+
+            JSON:API v1.1 spec: [9.1.2.4 403 Forbidden](https://jsonapi.org/format/1.1/#crud-creating-responses-403)
+        '404':
+          description: |-
+            ### 9.1.2.5 404 Not Found
+
+            A server **MUST** return `404 Not Found` when processing a request that references a related resource that does not exist.
+
+            JSON:API v1.1 spec: [9.1.2.5 404 Not Found](https://jsonapi.org/format/1.1/#crud-creating-responses-404)
+        '406':
+          description: |-
+            ### 9.1.2.6 406 Conflict
+
+            A server **MUST** return `409 Conflict` when processing a `POST` request to create a resource with a client-generated ID that already exists.
+
+            A server **MUST** return `409 Conflict` when processing a `POST` request in which the [resource object](https://jsonapi.org/format/1.1/#document-resource-objects)’s `type` is not among the type(s) that constitute the collection represented by the endpoint.
+
+            A server **SHOULD** include error details and provide enough information to recognize the source of the conflict.
+
+            JSON:API v1.1 spec: [9.1.2.6 406 Conflict](https://jsonapi.org/format/1.1/#crud-creating-responses-406)
+        default:
+          description: |-
+            ### 9.1.2.7 Other Responses
+
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include [error details](https://jsonapi.org/format/1.1/#errors) with error responses.
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with [HTTP semantics](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [9.1.2.7 Other Responses](https://jsonapi.org/format/1.1/#crud-creating-responses-other)
+  '/{collection}/{id}':
+    parameters:
+      - $ref: '#/components/parameters/collection'
+      - $ref: '#/components/parameters/id'
+    get:
+      summary: Fetch Resource
+      operationId: getResource
+      tags:
+        - Resources
+      description: Fetch individual resource.
+      parameters:
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/fields'
+      requestBody:
+        description: |
+          ### 8.1 Fetching Resources
+
+          A server **MUST** support fetching resource data for every URL provided as:
+
+          - a `self` link as part of the top-level links object
+          - a `self` link as part of a resource-level links object
+          - a `related` link as part of a relationship-level links object
+
+          The following request fetches an article:
+          ```http
+          GET /articles/1 HTTP/1.1
+          Accept: application/vnd.api+json
+          ```
+
+          JSON:API v1.1 spec: [8.1 Fetching Resources](https://jsonapi.org/format/1.1/#fetching-resources)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: |-
+            ### 8.1.1.1 200 OK
+
+            A server **MUST** respond to a successful request to fetch an individual resource or resource collection with a `200 OK` response.
+
+            A server **MUST** respond to a successful request to fetch an individual resource with a [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) or `null` provided as the response document’s primary data.
+
+            `null` is only an appropriate response when the requested URL is one that might correspond to a single resource, but doesn’t currently.
+
+            > Note: Consider, for example, a request to fetch a to-one related resource link. This request would respond with `null` when the relationship is empty (such that the link is corresponding to no resources) but with the single related resource’s [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) otherwise.
+
+            For example, a `GET` request to an individual article could return:
+
+            ```http
+            HTTP/1.1 200 OK
+            Content-Type: application/vnd.api+json
+
+            {
+              "links": {
+                "self": "http://example.com/articles/1"
+              },
+              "data": {
+                "type": "articles",
+                "id": "1",
+                "attributes": {
+                  "title": "JSON:API paints my bikeshed!"
+                },
+                "relationships": {
+                  "author": {
+                    "links": {
+                      "related": "http://example.com/articles/1/author"
+                    }
+                  }
+                }
+              }
+            }
+            ```
+
+            JSON:API v1.1 spec: [8.1.1.1 200 OK](https://jsonapi.org/format/1.1/#fetching-resources-responses-200)
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/successDocument'
+              examples:
+                article:
+                  value:
+                    data:
+                      type: articles
+                      id: '1'
+                      attributes:
+                        title: 'JSON:API paints my bikeshed!'
+                      relationships:
+                        author:
+                          links:
+                            related: 'http://example.com/articles/1/author'
+                    links:
+                      self: 'http://example.com/articles/1'
+        '404':
+          description: |-
+            ### 8.1.1.2 404 Not Found
+
+            A server **MUST** respond with `404 Not Found` when processing a request to fetch a single resource that does not exist, except when the request warrants a `200 OK` response with `null` as the primary data.
+
+            JSON:API v1.1 spec: [8.1.1.2 404 Not Found](https://jsonapi.org/format/1.1/#fetching-resources-responses-404)
+        default:
+          description: |-
+            ### 8.1.1.3 Other Responses
+
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include error details with [error responses](https://jsonapi.org/format/1.1/#errors).
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with [HTTP semantics](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [8.1.1.3 Other Responses](https://jsonapi.org/format/1.1/#fetching-resources-responses-other)
+    patch:
+      summary: Update Resource
+      operationId: updateResource
+      tags:
+        - Resources
+      description: Update individual resource.
+      parameters:
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/fields'
+      requestBody:
+        description: |-
+          ### 9.2 Updating Resources
+
+          A resource can be updated by sending a `PATCH` request to the URL that represents the resource.
+
+          The URL for a resource can be obtained in the `self` link of the [resource object](https://jsonapi.org/format/1.1/#document-resource-objects). Alternatively, when a `GET` request returns a single [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) as primary data, the same request URL can be used for updates.
+
+          The `PATCH` request **MUST** include a single [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) as primary data. The [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) **MUST** contain `type` and `id` members.
+
+          For example:
+          ```http
+          PATCH /articles/1 HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": {
+              "type": "articles",
+              "id": "1",
+              "attributes": {
+                "title": "To TDD or Not"
+              }
+            }
+          }
+          ```
+
+          JSON:API v1.1 spec: [9.2 Updating Resources](https://jsonapi.org/format/1.1/#crud-updating)
+
+          ### 9.2.1 Updating a Resource’s Attributes
+
+          Any or all of a resource’s [attributes](https://jsonapi.org/format/1.1/#document-resource-object-attributes) **MAY** be included in the resource object included in a `PATCH` request.
+
+          If a request does not include all of the [attributes](https://jsonapi.org/format/1.1/#document-resource-object-attributes) for a resource, the server **MUST** interpret the missing attributes as if they were included with their current values. The server **MUST NOT** interpret missing attributes as `null` values.
+
+          For example, the following `PATCH` request is interpreted as a request to update only the `title` and `text` attributes of an article:
+          ```http
+          PATCH /articles/1 HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": {
+              "type": "articles",
+              "id": "1",
+              "attributes": {
+                "title": "To TDD or Not",
+                "text": "TLDR; It's complicated... but check your test coverage regardless."
+              }
+            }
+          }
+          ```
+
+          JSON:API v1.1 spec: [9.2.1 Updating Resource’s Attributes](https://jsonapi.org/format/1.1/#crud-updating-resource-attributes)
+
+          ### 9.2.2 Updating a Resource’s Relationships
+
+          Any or all of a resource’s [relationships](https://jsonapi.org/format/1.1/#document-resource-object-relationships) **MAY** be included in the resource object included in a `PATCH` request.
+
+          If a request does not include all of the [relationships](https://jsonapi.org/format/1.1/#document-resource-object-relationships) for a resource, the server **MUST** interpret the missing [relationships](https://jsonapi.org/format/1.1/#document-resource-object-relationships) as if they were included with their current values. It **MUST NOT** interpret them as `null` or empty values.
+
+          If a relationship is provided in the `relationships` member of a resource object in a `PATCH` request, its value **MUST** be a relationship object with a `data` member. The relationship’s value will be replaced with the value specified in this member.
+
+          For instance, the following `PATCH` request will update the `author` relationship of an article:
+          ```http
+          PATCH /articles/1 HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": {
+              "type": "articles",
+              "id": "1",
+              "relationships": {
+                "author": {
+                  "data": { "type": "people", "id": "1" }
+                }
+              }
+            }
+          }
+          ```
+
+          Likewise, the following `PATCH` request performs a complete replacement of the `tags` for an article:
+          ```http
+          PATCH /articles/1 HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": {
+              "type": "articles",
+              "id": "1",
+              "relationships": {
+                "tags": {
+                  "data": [
+                    { "type": "tags", "id": "2" },
+                    { "type": "tags", "id": "3" }
+                  ]
+                }
+              }
+            }
+          }
+          ```
+
+          A server **MAY** reject an attempt to do a full replacement of a to-many relationship. In such a case, the server **MUST** reject the entire update, and return a `403 Forbidden` response.
+
+          > Note: Since full replacement may be a very dangerous operation, a server may choose to disallow it. For example, a server may reject full replacement if it has not provided the client with the full list of associated objects, and does not want to allow deletion of records the client has not seen.
+
+          JSON:API v1.1 spec: [9.2.2 Updating Resource’s Relationships](https://jsonapi.org/format/1.1/#crud-updating-resource-relationships)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+            examples:
+              updateArticle:
+                value:
+                  data:
+                    type: articles
+                    id: '1'
+                    attributes:
+                      title: To TDD or Not
+              updateAttributes:
+                value:
+                  data:
+                    type: articles
+                    id: '1'
+                    attributes:
+                      title: To TDD or Not
+                      text: TLDR; It's complicated... but check your test coverage regardless.
+              updateRelationshipsAuthor:
+                value:
+                  data:
+                    type: articles
+                    id: '1'
+                    relationships:
+                      author:
+                        data:
+                          type: people
+                          id: '1'
+              updateRelationshipsReplaceTags:
+                value:
+                  data:
+                    type: articles
+                    id: '1'
+                    relationships:
+                      tags:
+                        data:
+                          - type: tags
+                            id: '2'
+                          - type: tags
+                            id: '3'
+      responses:
+        '200':
+          description: |-
+            ### 9.2.3.1 200 OK
+
+            If a server accepts an update but also changes the targeted resource in ways other than those specified by the request (for example, updating the `updatedAt` attribute or a computed `sha`), it **MUST** return a `200 OK` response and a document that contains the updated resource as primary data.
+
+            A server **MAY** return a `200 OK` response with a document that contains no primary data if an update is successful and the server does not change the targeted resource in ways other than those specified by the request. Other top-level members, such as [meta](https://jsonapi.org/format/1.1/#document-meta), could be included in the response document.
+
+            JSON:API v1.1 spec: [9.2.3.1 200 OK](https://jsonapi.org/format/1.1/#crud-updating-responses-200)
+        '202':
+          description: |-
+            ### 9.2.3.2 202 Accepted
+
+            If an update request has been accepted for processing, but the processing has not been completed by the time the server responds, the server **MUST** return a `202 Accepted` status code.
+
+            JSON:API v1.1 spec: [9.2.3.2 202 Accepted](https://jsonapi.org/format/1.1/#crud-updating-responses-202)
+        '204':
+          description: |-
+            ### 9.2.3.3 204 No Content
+
+            If an update is successful and the server doesn’t change the targeted resource in ways other than those specified by the request, the server **MUST** return either a `200 OK` status code and response document or a `204 No Content` status code with no response document.
+
+            JSON:API v1.1 spec: [9.2.3.3 204 No Content](https://jsonapi.org/format/1.1/#crud-updating-responses-204)
+        '403':
+          description: |-
+            ### 9.2.3.4 403 Forbidden
+
+            A server **MUST** return `403 Forbidden` in response to an unsupported request to update a resource or relationship.
+
+            JSON:API v1.1 spec: [9.2.3.4 403 Forbidden](https://jsonapi.org/format/1.1/#crud-updating-responses-403)
+        '404':
+          description: |-
+            ### 9.2.3.5 404 Not Found
+
+            A server **MUST** return `404 Not Found` when processing a request to modify a resource that does not exist.
+
+            A server **MUST** return `404 Not Found` when processing a request that references a related resource that does not exist.
+
+            JSON:API v1.1 spec: [9.2.3.5 404 Not Found](https://jsonapi.org/format/1.1/#crud-updating-responses-404)
+        '409':
+          description: |-
+            ### 9.2.3.6 409 Conflict
+
+            A server **MAY** return `409 Conflict` when processing a `PATCH` request to update a resource if that update would violate other server-enforced constraints (such as a uniqueness constraint on a property other than `id`).
+
+            A server **MUST** return `409 Conflict` when processing a `PATCH` request in which the resource object’s `type` or `id` do not match the server’s endpoint.
+
+            A server **SHOULD** include error details and provide enough information to recognize the source of the conflict.
+
+            JSON:API v1.1 spec: [9.2.3.6 409 Conflict](https://jsonapi.org/format/1.1/#crud-updating-responses-409)
+        default:
+          description: |-
+            ### 9.2.3.7 Other Responses
+
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include [error details](https://jsonapi.org/format/1.1/#errors) with error responses.
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with [HTTP semantics](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [9.2.3.7 Other Responses](https://jsonapi.org/format/1.1/#crud-updating-responses-other)
+    delete:
+      summary: Delete Resource
+      operationId: deleteResource
+      tags:
+        - Resources
+      description: Delete individual resource.
+      requestBody:
+        description: |-
+          ### 9.4 Deleting Resources
+
+          A resource can be deleted by sending a `DELETE` request to the URL that represents the resource:
+
+          ```http
+          DELETE /photos/1 HTTP/1.1
+          Accept: application/vnd.api+json
+          ```
+
+          JSON:API v1.1 spec: [9.4 Deleting Resources](https://jsonapi.org/format/1.1/#crud-deleting)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: |-
+            ### 9.4.1.1 200 OK
+
+            A server **MAY** return a `200 OK` response with a document that contains no primary data if a deletion request is successful. Other top-level members, such as [meta](https://jsonapi.org/format/1.1/#document-meta), could be included in the response document.
+
+            JSON:API v1.1 spec: [9.4.1.1 200 OK](https://jsonapi.org/format/1.1/#crud-deleting-responses-200)
+        '202':
+          description: |-
+            ### 9.4.1.2 202 Accepted
+
+            If a deletion request has been accepted for processing, but the processing has not been completed by the time the server responds, the server **MUST** return a `202 Accepted` status code.
+
+            JSON:API v1.1 spec: [9.4.1.2 202 Accepted](https://jsonapi.org/format/1.1/#crud-deleting-responses-202)
+        '204':
+          description: |-
+            ### 9.4.1.3 204 No Content
+
+            If a deletion request is successful, the server **MUST** return either a `200 OK` status code and response document or a `204 No Content` status code with no response document.
+
+            JSON:API v1.1 spec: [9.4.1.3 204 No Content](https://jsonapi.org/format/1.1/#crud-deleting-responses-204)
+        '404':
+          description: |-
+            ### 9.4.1.4 404 Not Found
+
+            A server **SHOULD** return a `404 Not Found` status code if a deletion request fails due to the resource not existing.
+
+            JSON:API v1.1 spec: [9.4.1.4 404 Not Found](https://jsonapi.org/format/1.1/#crud-deleting-responses-404)
+        default:
+          description: |-
+            ### 9.4.1.5 Other Responses
+
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include [error details](https://jsonapi.org/format/1.1/#errors) with error responses.
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with [HTTP semantics](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [9.4.1.5 Other Responses](https://jsonapi.org/format/1.1/#crud-deleting-responses-other)
+  '/{collection}/{id}/relationships/{relationship}':
+    get:
+      summary: Fetch Resource Relationships
+      operationId: getResourceRelationships
+      tags:
+        - Relationships
+      description: Fetch resource relationships.
+      parameters:
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/fields'
+      requestBody:
+        description: |-
+          ### 8.2 Fetching Relationships
+
+          A server **MUST** support fetching relationship data for every relationship URL provided as a `self` link as part of a relationship’s `links` object.
+
+          For example, the following request fetches data about an article’s comments:
+          ```http
+          GET /articles/1/relationships/comments HTTP/1.1
+          Accept: application/vnd.api+json
+          ```
+
+          And the following request fetches data about an article’s author:
+          ```http
+          GET /articles/1/relationships/author HTTP/1.1
+          Accept: application/vnd.api+json
+          ```
+
+          JSON:API v1.1 spec: [8.2 Fetching Relationships](https://jsonapi.org/format/1.1/#fetching-relationships)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: |-
+            A server **MUST** respond to a successful request to fetch a relationship with a `200 OK` response.
+
+            The primary data in the response document **MUST** match the appropriate value for [resource linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage), as described in [relationship objects](https://jsonapi.org/format/1.1/#document-resource-object-relationships).
+
+            The top-level [links object](https://jsonapi.org/format/1.1/#document-links) **MAY** contain `self` and `related` links, as described in
+            [relationship objects](https://jsonapi.org/format/1.1/#document-resource-object-relationships).
+
+            For example, a `GET` request to a URL from a to-one relationship link could return:
+            ```http
+            HTTP/1.1 200 OK
+            Content-Type: application/vnd.api+json
+
+            {
+              "links": {
+                "self": "/articles/1/relationships/author",
+                "related": "/articles/1/author"
+              },
+              "data": {
+                "type": "people",
+                "id": "12"
+              }
+            }
+            ```
+
+            If the above relationship is empty, then a `GET` request to the same URL would return:
+            ```http
+            HTTP/1.1 200 OK
+            Content-Type: application/vnd.api+json
+
+            {
+              "links": {
+                "self": "/articles/1/relationships/author",
+                "related": "/articles/1/author"
+              },
+              "data": null
+            }
+            ```
+
+            A `GET` request to a URL from a to-many relationship link could return:
+            ```http
+            HTTP/1.1 200 OK
+            Content-Type: application/vnd.api+json
+
+            {
+              "links": {
+                "self": "/articles/1/relationships/tags",
+                "related": "/articles/1/tags"
+              },
+              "data": [
+                { "type": "tags", "id": "2" },
+                { "type": "tags", "id": "3" }
+              ]
+            }
+            ```
+
+            If the above relationship is empty, then a GET request to the same URL would return:
+            ```http
+            HTTP/1.1 200 OK
+            Content-Type: application/vnd.api+json
+
+            {
+              "links": {
+                "self": "/articles/1/relationships/tags",
+                "related": "/articles/1/tags"
+              },
+              "data": []
+            }
+            ```
+
+            JSON:API v1.1 spec: [8.2.1.1 200 OK](https://jsonapi.org/format/1.1/#fetching-relationships-responses-200)
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/successDocument'
+              examples:
+                toOne:
+                  value:
+                    data:
+                      type: people
+                      id: '12'
+                    links:
+                      self: /articles/1/relationships/author
+                      related: /articles/1/author
+                toOneEmpty:
+                  value:
+                    data: null
+                    links:
+                      self: /articles/1/relationships/author
+                      related: /articles/1/author
+                toMany:
+                  value:
+                    data:
+                      - type: tags
+                        id: '2'
+                      - type: tags
+                        id: '3'
+                    links:
+                      self: /articles/1/relationships/tags
+                      related: /articles/1/tags
+                toManyEmpty:
+                  value:
+                    data: []
+                    links:
+                      self: /articles/1/relationships/tags
+                      related: /articles/1/tags
+        '404':
+          description: |-
+            A server **MUST** return `404 Not Found` when processing a request to fetch a relationship link URL that does not exist.
+
+            > Note: This can happen when the parent resource of the relationship does not exist. For example, when `/articles/1` does not exist, request to `/articles/1/relationships/tags` returns `404 Not Found`.
+
+            If a relationship link URL exists but the relationship is empty, then `200 OK` **MUST** be returned, as described above.
+
+            JSON:API v1.1 spec: [8.2.1.2 404 Not Found](https://jsonapi.org/format/1.1/#fetching-relationships-responses-404)
+        default:
+          description: |-
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include error details with [error responses](https://jsonapi.org/format/1.1/#errors).
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with [HTTP semantics](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [8.2.1.3 Other Responses](https://jsonapi.org/format/1.1/#fetching-relationships-responses-other)
+    parameters:
+      - $ref: '#/components/parameters/collection'
+      - $ref: '#/components/parameters/id'
+      - $ref: '#/components/parameters/relationship'
+    patch:
+      summary: Replace Resource Relationships
+      operationId: updateResourceRelationships
+      tags:
+        - Relationships
+      description: Replace Resource Relationships.
+      parameters:
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/fields'
+      requestBody:
+        description: |-
+          ### 9.3 Updating Relationships
+
+          Although relationships can be modified along with resources, JSON:API also supports updating of relationships independently at URLs from relationship links.
+
+          > Note: Relationships are updated without exposing the underlying server semantics, such as foreign keys. Furthermore, relationships can be updated without necessarily affecting the related resources. For example, if an article has many authors, it is possible to remove one of the authors from the article without deleting the person itself. Similarly, if an article has many tags, it is possible to add or remove tags. Under the hood on the server, the first of these examples might be implemented with a foreign key, while the second could be implemented with a join table, but the JSON:API protocol would be the same in both cases.
+
+          > Note: A server may choose to delete the underlying resource if a relationship is deleted (as a garbage collection measure).
+
+          JSON:API v1.1 spec: [9.3 Updating Relationships](https://jsonapi.org/format/1.1/#crud-updating-relationships)
+
+          ### 9.3.1 Updating To-One Relationships
+
+          A to-one relationship can be updated by sending a `PATCH` request to a URL from a to-one [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships).
+
+          The `PATCH` request **MUST** include a top-level member named `data` containing one of:
+
+          - a [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) corresponding to the new related resource.
+          - `null`, to remove the relationship.
+
+          For example, the following request updates the author of an article:
+          ```http
+          PATCH /articles/1/relationships/author HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": { "type": "people", "id": "12" }
+          }
+          ```
+
+          And the following request clears the author of the same article:
+          ```http
+          PATCH /articles/1/relationships/author HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": null
+          }
+          ```
+
+          If the relationship is updated successfully then the server **MUST** return a successful response.
+
+          JSON:API v1.1 spec: [9.3.1 Updating To-One Relationships](https://jsonapi.org/format/1.1/#crud-updating-to-one-relationships)
+
+          ### 9.3.2  Updating To-Many Relationships
+
+          A to-many relationship can be updated by sending a `PATCH`, `POST`, or `DELETE` request to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships).
+
+          For all request types, the body **MUST** contain a `data` member whose value is an empty array or an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects).
+
+          If a client makes a `PATCH` request to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships), the server **MUST** either completely replace every member of the relationship, return an appropriate error response if some resources cannot be found or accessed, or return a `403 Forbidden` response if complete replacement is not allowed by the server.
+
+          For example, the following request replaces every tag for an article:
+          ```http
+          PATCH /articles/1/relationships/tags HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": [
+              { "type": "tags", "id": "2" },
+              { "type": "tags", "id": "3" }
+            ]
+          }
+          ```
+
+          And the following request clears every tag for an article:
+          ```http
+          PATCH /articles/1/relationships/tags HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": []
+          }
+          ```
+
+          JSON:API v1.1 spec: [9.3.2 Updating To-Many Relationships](https://jsonapi.org/format/1.1/#crud-updating-to-many-relationships)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+            examples:
+              updateToOneAuthor:
+                value:
+                  data:
+                    type: people
+                    id: '12'
+              clearToOneAuthor:
+                value:
+                  data: null
+              replaceToManyTags:
+                value:
+                  data:
+                    - type: tags
+                      id: '2'
+                    - type: tags
+                      id: '3'
+              clearToManyTags:
+                value:
+                  data: []
+      responses:
+        '200':
+          description: |-
+            ### 9.3.3.1 200 OK
+            If a server accepts an update but also changes the targeted relationship in other ways than those specified by the request, it **MUST** return a `200 OK` response and a document that includes the updated relationship data as its primary data.
+
+            A server **MAY** return a `200 OK` response with a document that contains no primary data if an update is successful and the server does not change the targeted relationship in ways other than those specified by the request. Other top-level members, such as [meta](https://jsonapi.org/format/1.1/#document-meta), could be included in the response document.
+
+            JSON:API v1.1 spec: [9.3.3.1 200 OK](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-200)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '202':
+          description: |-
+            ### 9.3.3.2 202 Accepted
+            If a relationship update request has been accepted for processing, but the processing has not been completed by the time the server responds, the server **MUST** return a `202 Accepted`status code.
+
+            JSON:API v1.1 spec: [9.3.3.2 202 Accepted](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-202)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '204':
+          description: |-
+            ### 9.3.3.3 204 No Content
+            If an update is successful and the server doesn't change the targeted relationship in ways other than those specified by the request, the server **MUST** return either a `200 OK` status code and response document or a `204 No Content` status code with no response document.
+
+            > Note: This is the appropriate response to a `POST` request sent to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships) when that relationship already exists. It is also the appropriate response to a `DELETE` request sent to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships) when that relationship does not exist.
+
+            JSON:API v1.1 spec: [9.3.3.3 204 No Content](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-204)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '403':
+          description: |-
+            ### 9.3.3.4 403 Forbidden
+            A server **MUST** return `403 Forbidden` in response to an unsupported request to update a relationship.
+
+            JSON:API v1.1 spec: [9.3.3.4 403 Forbidden](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-403)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        default:
+          description: |-
+            ### 9.3.3.5 Other Responses
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include [error details](https://jsonapi.org/format/1.1/#errors) with error responses.
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with[`HTTP semantics`](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [9.3.3.5 Other Responses](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-other)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+    post:
+      summary: Add To-Many Resource Relationships
+      operationId: addResourceRelationships
+      tags:
+        - Relationships
+      description: Add To-Many Resource Relationships.
+      parameters:
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/fields'
+      requestBody:
+        description: |-
+          ### 9.3 Updating Relationships
+
+          Although relationships can be modified along with resources, JSON:API also supports updating of relationships independently at URLs from relationship links.
+
+          > Note: Relationships are updated without exposing the underlying server semantics, such as foreign keys. Furthermore, relationships can be updated without necessarily affecting the related resources. For example, if an article has many authors, it is possible to remove one of the authors from the article without deleting the person itself. Similarly, if an article has many tags, it is possible to add or remove tags. Under the hood on the server, the first of these examples might be implemented with a foreign key, while the second could be implemented with a join table, but the JSON:API protocol would be the same in both cases.
+
+          > Note: A server may choose to delete the underlying resource if a relationship is deleted (as a garbage collection measure).
+
+          JSON:API v1.1 spec: [9.3 Updating Relationships](https://jsonapi.org/format/1.1/#crud-updating-relationships)
+
+          ### 9.3.2  Updating To-Many Relationships
+
+          A to-many relationship can be updated by sending a `PATCH`, `POST`, or `DELETE` request to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships).
+
+          For all request types, the body **MUST** contain a `data` member whose value is an empty array or an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects).
+
+          If a client makes a `POST` request to a URL from a [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships), the server **MUST** add the specified members to the relationship unless they are already present. If a given `type` and `id` is already in the relationship, the server **MUST NOT** add it again.
+
+          > Note: This matches the semantics of databases that use foreign keys for has-many relationships. Document-based storage should check the has-many relationship before appending to avoid duplicates.
+
+          If all of the specified resources can be added to, or are already present in, the relationship then the server **MUST** return a successful response.
+
+          > Note: This approach ensures that a request is successful if the server's state matches the requested state, and helps avoid pointless race conditions caused by multiple clients making the same changes to a relationship.
+
+          In the following example, the comment with ID `123` is added to the list of comments for the article with ID `1`:
+
+          ```http
+          POST /articles/1/relationships/comments HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": [
+              { "type": "comments", "id": "123" }
+            ]
+          }
+          ```
+
+          JSON:API v1.1 spec: [9.3.2 Updating To-Many Relationships](https://jsonapi.org/format/1.1/#crud-updating-to-many-relationships)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+            examples:
+              addComment:
+                value:
+                  data:
+                    - type: comments
+                      id: '123'
+      responses:
+        '200':
+          description: |-
+            ### 9.3.3.1 200 OK
+            If a server accepts an update but also changes the targeted relationship in other ways than those specified by the request, it **MUST** return a `200 OK` response and a document that includes the updated relationship data as its primary data.
+
+            A server **MAY** return a `200 OK` response with a document that contains no primary data if an update is successful and the server does not change the targeted relationship in ways other than those specified by the request. Other top-level members, such as [meta](https://jsonapi.org/format/1.1/#document-meta), could be included in the response document.
+
+            JSON:API v1.1 spec: [9.3.3.1 200 OK](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-200)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '202':
+          description: |-
+            ### 9.3.3.2 202 Accepted
+            If a relationship update request has been accepted for processing, but the processing has not been completed by the time the server responds, the server **MUST** return a `202 Accepted`status code.
+
+            JSON:API v1.1 spec: [9.3.3.2 202 Accepted](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-202)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '204':
+          description: |-
+            ### 9.3.3.3 204 No Content
+            If an update is successful and the server doesn't change the targeted relationship in ways other than those specified by the request, the server **MUST** return either a `200 OK` status code and response document or a `204 No Content` status code with no response document.
+
+            > Note: This is the appropriate response to a `POST` request sent to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships) when that relationship already exists. It is also the appropriate response to a `DELETE` request sent to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships) when that relationship does not exist.
+
+            JSON:API v1.1 spec: [9.3.3.3 204 No Content](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-204)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '403':
+          description: |-
+            ### 9.3.3.4 403 Forbidden
+            A server **MUST** return `403 Forbidden` in response to an unsupported request to update a relationship.
+
+            JSON:API v1.1 spec: [9.3.3.4 403 Forbidden](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-403)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        default:
+          description: |-
+            ### 9.3.3.5 Other Responses
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include [error details](https://jsonapi.org/format/1.1/#errors) with error responses.
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with[`HTTP semantics`](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [9.3.3.5 Other Responses](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-other)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+    delete:
+      summary: Delete To-Many Relationships
+      operationId: deleteResourceRelationships
+      tags:
+        - Relationships
+      description: Delete To-Many Relationships.
+      requestBody:
+        description: |-
+          ### 9.3 Updating Relationships
+
+          Although relationships can be modified along with resources, JSON:API also supports updating of relationships independently at URLs from relationship links.
+
+          > Note: Relationships are updated without exposing the underlying server semantics, such as foreign keys. Furthermore, relationships can be updated without necessarily affecting the related resources. For example, if an article has many authors, it is possible to remove one of the authors from the article without deleting the person itself. Similarly, if an article has many tags, it is possible to add or remove tags. Under the hood on the server, the first of these examples might be implemented with a foreign key, while the second could be implemented with a join table, but the JSON:API protocol would be the same in both cases.
+
+          > Note: A server may choose to delete the underlying resource if a relationship is deleted (as a garbage collection measure).
+
+          JSON:API v1.1 spec: [9.3 Updating Relationships](https://jsonapi.org/format/1.1/#crud-updating-relationships)
+
+          ### 9.3.2  Updating To-Many Relationships
+
+          A to-many relationship can be updated by sending a `PATCH`, `POST`, or `DELETE` request to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships).
+
+          For all request types, the body **MUST** contain a `data` member whose value is an empty array or an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects).
+
+          If the client makes a `DELETE` request to a URL from a [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships) the server **MUST** delete the specified members from the relationship or return a `403 Forbidden` response. If all of the specified resources are able to be removed from, or are already missing from, the relationship then the server **MUST** return a successful response.
+
+          > Note: As described above for `POST` requests, this approach helps avoid pointless race conditions between multiple clients making the same changes.
+
+          Relationship members are specified in the same way as in the `POST` request.
+
+          In the following example, comments with IDs of `12` and `13` are removed from the list of comments for the article with ID `1`:
+          ```http
+          DELETE /articles/1/relationships/comments HTTP/1.1
+          Content-Type: application/vnd.api+json
+          Accept: application/vnd.api+json
+
+          {
+            "data": [
+              { "type": "comments", "id": "12" },
+              { "type": "comments", "id": "13" }
+            ]
+          }
+          ```
+
+          > Note: RFC 7231 specifies that a `DELETE` request may include a body, but that a server may reject the request. This spec defines the semantics of a server, and we are defining its semantics for JSON:API.
+
+          JSON:API v1.1 spec: [9.3.2 Updating To-Many Relationships](https://jsonapi.org/format/1.1/#crud-updating-to-many-relationships)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+            examples:
+              deleteSpecificComments:
+                value:
+                  data:
+                    - type: comments
+                      id: '12'
+                    - type: comments
+                      id: '13'
+      responses:
+        '200':
+          description: |-
+            ### 9.3.3.1 200 OK
+            If a server accepts an update but also changes the targeted relationship in other ways than those specified by the request, it **MUST** return a `200 OK` response and a document that includes the updated relationship data as its primary data.
+
+            A server **MAY** return a `200 OK` response with a document that contains no primary data if an update is successful and the server does not change the targeted relationship in ways other than those specified by the request. Other top-level members, such as [meta](https://jsonapi.org/format/1.1/#document-meta), could be included in the response document.
+
+            JSON:API v1.1 spec: [9.3.3.1 200 OK](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-200)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '202':
+          description: |-
+            ### 9.3.3.2 202 Accepted
+            If a relationship update request has been accepted for processing, but the processing has not been completed by the time the server responds, the server **MUST** return a `202 Accepted`status code.
+
+            JSON:API v1.1 spec: [9.3.3.2 202 Accepted](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-202)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '204':
+          description: |-
+            ### 9.3.3.3 204 No Content
+            If an update is successful and the server doesn't change the targeted relationship in ways other than those specified by the request, the server **MUST** return either a `200 OK` status code and response document or a `204 No Content` status code with no response document.
+
+            > Note: This is the appropriate response to a `POST` request sent to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships) when that relationship already exists. It is also the appropriate response to a `DELETE` request sent to a URL from a to-many [relationship link](https://jsonapi.org/format/1.1/#document-resource-object-relationships) when that relationship does not exist.
+
+            JSON:API v1.1 spec: [9.3.3.3 204 No Content](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-204)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        '403':
+          description: |-
+            ### 9.3.3.4 403 Forbidden
+            A server **MUST** return `403 Forbidden` in response to an unsupported request to update a relationship.
+
+            JSON:API v1.1 spec: [9.3.3.4 403 Forbidden](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-403)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+        default:
+          description: |-
+            ### 9.3.3.5 Other Responses
+            A server **MAY** respond with other HTTP status codes.
+
+            A server **MAY** include [error details](https://jsonapi.org/format/1.1/#errors) with error responses.
+
+            A server **MUST** prepare responses, and a client **MUST** interpret responses, in accordance with[`HTTP semantics`](http://tools.ietf.org/html/rfc7231).
+
+            JSON:API v1.1 spec: [9.3.3.5 Other Responses](https://jsonapi.org/format/1.1/#crud-updating-relationship-responses-other)
+          content:
+            application/vnd.api+json:
+              schema:
+                type: object
+  '/{collection}/{id}/{relationship}':
+    get:
+      summary: Fetch Related Resources
+      operationId: getRelatedResources
+      tags:
+        - Relationships
+      description: Fetch related resources.
+      parameters:
+        - $ref: '#/components/parameters/include'
+        - $ref: '#/components/parameters/fields'
+        - $ref: '#/components/parameters/sort'
+        - $ref: '#/components/parameters/page'
+        - $ref: '#/components/parameters/filter'
+      requestBody:
+        description: |-
+          ### 7.2.2.3 Related Resource Links
+
+          A "related resource link" provides access to [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) [linked](https://jsonapi.org/format/1.1/#document-links) in a [relationship](https://jsonapi.org/format/1.1/#document-resource-object-relationships). When fetched, the related resource object(s) are returned as the response's primary data.
+
+          For example, an `article`'s `comments` [relationship](https://jsonapi.org/format/1.1/#document-resource-object-relationships) could specify a [link](https://jsonapi.org/format/1.1/#document-links) that returns a collection of comment [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) when retrieved through a `GET` request.
+
+          If present, a related resource link **MUST** reference a valid URL, even if the relationship isn't currently associated with any target resources. Additionally, a related resource link **MUST NOT** change because its relationship's content changes.
+
+          JSON:API v1.1 spec: [7.2.2.3 Related Resource Links](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links)
+        content:
+          application/vnd.api+json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: '> This operation is mentioned but not specified in the spec.'
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/successDocument'
+              examples:
+                toOne:
+                  value:
+                    data:
+                      type: people
+                      id: '12'
+                    links:
+                      self: /articles/1/relationships/author
+                      related: /articles/1/author
+                toOneEmpty:
+                  value:
+                    data: null
+                    links:
+                      self: /articles/1/relationships/author
+                      related: /articles/1/author
+                toMany:
+                  value:
+                    data:
+                      - type: tags
+                        id: '2'
+                      - type: tags
+                        id: '3'
+                    links:
+                      self: /articles/1/relationships/tags
+                      related: /articles/1/tags
+                toManyEmpty:
+                  value:
+                    data: []
+                    links:
+                      self: /articles/1/relationships/tags
+                      related: /articles/1/tags
+    parameters:
+      - name: collection
+        in: path
+        description: Collection name (Resource Type)
+        required: true
+        schema:
+          type: string
+          example: articles
+      - name: id
+        in: path
+        description: Resource id
+        required: true
+        schema:
+          type: string
+          example: '1234'
+      - name: relationship
+        in: path
+        description: Resource relationship name (Resource Type)
+        required: true
+        schema:
+          type: string
+components:
+  schemas:
+    document:
+      title: 'JSON:API Document (Top Level)'
+      description: |-
+        ### 7.1 Top Level
+
+        A JSON object **MUST** be at the root of every JSON:API request and response document containing data. This object defines a document's "top level".
+
+        A document **MUST** contain at least one of the following top-level members:
+        -   `data`: the document's "primary data".
+        -   `errors`: an array of [error objects](https://jsonapi.org/format/1.1/#errors).
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) that contains non-standard meta-information.
+        -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+
+        The members `data` and `errors` **MUST NOT** coexist in the same document.
+
+        A document **MAY** contain any of these top-level members:
+        -   `jsonapi`: an object describing the server's implementation.
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) related to the primary data.
+        -   `included`: an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) that are related to the primary data and/or each other ("included resources").
+
+        If a document does not contain a top-level `data` key, the `included` member **MUST NOT** be present either.
+
+        The top-level [links object](https://jsonapi.org/format/1.1/#document-links) **MAY** contain the following members:
+        -   `self`: the [link](https://jsonapi.org/format/1.1/#document-links) that generated the current response document. If a document has extensions or profiles applied to it, this link **SHOULD** be represented by a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) with the `type` target attribute specifying the JSON:API media type with all applicable parameters.
+        -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links) when the primary data represents a resource relationship.
+        -   `describedby`: a [link](https://jsonapi.org/format/1.1/#document-links-link) to a description document (e.g. OpenAPI or JSON Schema) for the current document.
+        -   [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links for the primary data.
+
+        > Note: The `self` link in the top-level `links` object allows a client to refresh the data represented by the current response document. The client should be able to use the provided link without applying any additional information. Therefore the link must contain the query parameters provided by the client to generate the response document. This includes but is not limited to query parameters used for [inclusion of related resources][fetching resources], [sparse fieldsets][fetching sparse fieldsets], [sorting][fetching sorting], [pagination][fetching pagination] and [filtering][fetching filtering].
+
+        The document's "primary data" is a representation of the resource or collection of resources targeted by a request.
+
+        Primary data **MUST** be either:
+        -   a single [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or `null`, for requests that target single resources
+        -   an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects), an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or an empty array (`[]`), for requests that target resource collections
+
+        For example, the following primary data is a single resource object:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1",
+            "attributes": {
+              // ... this article's attributes
+            },
+            "relationships": {
+              // ... this article's relationships
+            }
+          }
+        }
+        ```
+
+        The following primary data is a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) that references the same resource:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1"
+          }
+        }
+        ```
+
+        A logical collection of resources **MUST** be represented as an array, even if it only contains one item or is empty.
+
+        JSON:API v1.1 spec: [7.1 Top Level](https://jsonapi.org/format/1.1/#document-top-level)
+      oneOf:
+        - $ref: '#/components/schemas/successDocument'
+        - $ref: '#/components/schemas/failureDocument'
+        - $ref: '#/components/schemas/infoDocument'
+        - type: object
+          title: 'JSON:API Document - Extension'
+          description: A member defined by an applied extension.
+          additionalProperties: true
+    successDocument:
+      title: 'JSON:API Document - Success'
+      description: |-
+        ### 7.1 Top Level
+
+        A JSON object **MUST** be at the root of every JSON:API request and response document containing data. This object defines a document's "top level".
+
+        A document **MUST** contain at least one of the following top-level members:
+        -   `data`: the document's "primary data".
+        -   `errors`: an array of [error objects](https://jsonapi.org/format/1.1/#errors).
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) that contains non-standard meta-information.
+        -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+
+        The members `data` and `errors` **MUST NOT** coexist in the same document.
+
+        A document **MAY** contain any of these top-level members:
+        -   `jsonapi`: an object describing the server's implementation.
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) related to the primary data.
+        -   `included`: an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) that are related to the primary data and/or each other ("included resources").
+
+        If a document does not contain a top-level `data` key, the `included` member **MUST NOT** be present either.
+
+        The top-level [links object](https://jsonapi.org/format/1.1/#document-links) **MAY** contain the following members:
+        -   `self`: the [link](https://jsonapi.org/format/1.1/#document-links) that generated the current response document. If a document has extensions or profiles applied to it, this link **SHOULD** be represented by a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) with the `type` target attribute specifying the JSON:API media type with all applicable parameters.
+        -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links) when the primary data represents a resource relationship.
+        -   `describedby`: a [link](https://jsonapi.org/format/1.1/#document-links-link) to a description document (e.g. OpenAPI or JSON Schema) for the current document.
+        -   [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links for the primary data.
+
+        > Note: The `self` link in the top-level `links` object allows a client to refresh the data represented by the current response document. The client should be able to use the provided link without applying any additional information. Therefore the link must contain the query parameters provided by the client to generate the response document. This includes but is not limited to query parameters used for [inclusion of related resources][fetching resources], [sparse fieldsets][fetching sparse fieldsets], [sorting][fetching sorting], [pagination][fetching pagination] and [filtering][fetching filtering].
+
+        The document's "primary data" is a representation of the resource or collection of resources targeted by a request.
+
+        Primary data **MUST** be either:
+        -   a single [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or `null`, for requests that target single resources
+        -   an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects), an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or an empty array (`[]`), for requests that target resource collections
+
+        For example, the following primary data is a single resource object:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1",
+            "attributes": {
+              // ... this article's attributes
+            },
+            "relationships": {
+              // ... this article's relationships
+            }
+          }
+        }
+        ```
+
+        The following primary data is a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) that references the same resource:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1"
+          }
+        }
+        ```
+
+        A logical collection of resources **MUST** be represented as an array, even if it only contains one item or is empty.
+
+        JSON:API v1.1 spec: [7.1 Top Level](https://jsonapi.org/format/1.1/#document-top-level)
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          $ref: '#/components/schemas/topLevelPrimaryData'
+        meta:
+          $ref: '#/components/schemas/meta'
+        jsonapi:
+          $ref: '#/components/schemas/jsonapi'
+        links:
+          $ref: '#/components/schemas/topLevelLinks'
+        included:
+          description: 'To reduce the number of HTTP requests, servers **MAY** allow responses that include related resources along with the requested primary resources. Such responses are called "compound documents".'
+          type: array
+          items:
+            $ref: '#/components/schemas/resource'
+          uniqueItems: true
+      additionalProperties: false
+    failureDocument:
+      title: 'JSON:API Document - Failure'
+      description: |-
+        ### 7.1 Top Level
+
+        A JSON object **MUST** be at the root of every JSON:API request and response document containing data. This object defines a document's "top level".
+
+        A document **MUST** contain at least one of the following top-level members:
+        -   `data`: the document's "primary data".
+        -   `errors`: an array of [error objects](https://jsonapi.org/format/1.1/#errors).
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) that contains non-standard meta-information.
+        -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+
+        The members `data` and `errors` **MUST NOT** coexist in the same document.
+
+        A document **MAY** contain any of these top-level members:
+        -   `jsonapi`: an object describing the server's implementation.
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) related to the primary data.
+        -   `included`: an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) that are related to the primary data and/or each other ("included resources").
+
+        If a document does not contain a top-level `data` key, the `included` member **MUST NOT** be present either.
+
+        The top-level [links object](https://jsonapi.org/format/1.1/#document-links) **MAY** contain the following members:
+        -   `self`: the [link](https://jsonapi.org/format/1.1/#document-links) that generated the current response document. If a document has extensions or profiles applied to it, this link **SHOULD** be represented by a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) with the `type` target attribute specifying the JSON:API media type with all applicable parameters.
+        -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links) when the primary data represents a resource relationship.
+        -   `describedby`: a [link](https://jsonapi.org/format/1.1/#document-links-link) to a description document (e.g. OpenAPI or JSON Schema) for the current document.
+        -   [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links for the primary data.
+
+        > Note: The `self` link in the top-level `links` object allows a client to refresh the data represented by the current response document. The client should be able to use the provided link without applying any additional information. Therefore the link must contain the query parameters provided by the client to generate the response document. This includes but is not limited to query parameters used for [inclusion of related resources][fetching resources], [sparse fieldsets][fetching sparse fieldsets], [sorting][fetching sorting], [pagination][fetching pagination] and [filtering][fetching filtering].
+
+        The document's "primary data" is a representation of the resource or collection of resources targeted by a request.
+
+        Primary data **MUST** be either:
+        -   a single [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or `null`, for requests that target single resources
+        -   an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects), an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or an empty array (`[]`), for requests that target resource collections
+
+        For example, the following primary data is a single resource object:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1",
+            "attributes": {
+              // ... this article's attributes
+            },
+            "relationships": {
+              // ... this article's relationships
+            }
+          }
+        }
+        ```
+
+        The following primary data is a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) that references the same resource:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1"
+          }
+        }
+        ```
+
+        A logical collection of resources **MUST** be represented as an array, even if it only contains one item or is empty.
+
+        JSON:API v1.1 spec: [7.1 Top Level](https://jsonapi.org/format/1.1/#document-top-level)
+      type: object
+      required:
+        - errors
+      properties:
+        errors:
+          $ref: '#/components/schemas/errors'
+        meta:
+          $ref: '#/components/schemas/meta'
+        jsonapi:
+          $ref: '#/components/schemas/jsonapi'
+        links:
+          $ref: '#/components/schemas/topLevelLinks'
+      additionalProperties: false
+    infoDocument:
+      title: 'JSON:API Document - Info'
+      description: |-
+        ### 7.1 Top Level
+
+        A JSON object **MUST** be at the root of every JSON:API request and response document containing data. This object defines a document's "top level".
+
+        A document **MUST** contain at least one of the following top-level members:
+        -   `data`: the document's "primary data".
+        -   `errors`: an array of [error objects](https://jsonapi.org/format/1.1/#errors).
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) that contains non-standard meta-information.
+        -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+
+        The members `data` and `errors` **MUST NOT** coexist in the same document.
+
+        A document **MAY** contain any of these top-level members:
+        -   `jsonapi`: an object describing the server's implementation.
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) related to the primary data.
+        -   `included`: an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) that are related to the primary data and/or each other ("included resources").
+
+        If a document does not contain a top-level `data` key, the `included` member **MUST NOT** be present either.
+
+        The top-level [links object](https://jsonapi.org/format/1.1/#document-links) **MAY** contain the following members:
+        -   `self`: the [link](https://jsonapi.org/format/1.1/#document-links) that generated the current response document. If a document has extensions or profiles applied to it, this link **SHOULD** be represented by a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) with the `type` target attribute specifying the JSON:API media type with all applicable parameters.
+        -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links) when the primary data represents a resource relationship.
+        -   `describedby`: a [link](https://jsonapi.org/format/1.1/#document-links-link) to a description document (e.g. OpenAPI or JSON Schema) for the current document.
+        -   [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links for the primary data.
+
+        > Note: The `self` link in the top-level `links` object allows a client to refresh the data represented by the current response document. The client should be able to use the provided link without applying any additional information. Therefore the link must contain the query parameters provided by the client to generate the response document. This includes but is not limited to query parameters used for [inclusion of related resources][fetching resources], [sparse fieldsets][fetching sparse fieldsets], [sorting][fetching sorting], [pagination][fetching pagination] and [filtering][fetching filtering].
+
+        The document's "primary data" is a representation of the resource or collection of resources targeted by a request.
+
+        Primary data **MUST** be either:
+        -   a single [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or `null`, for requests that target single resources
+        -   an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects), an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or an empty array (`[]`), for requests that target resource collections
+
+        For example, the following primary data is a single resource object:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1",
+            "attributes": {
+              // ... this article's attributes
+            },
+            "relationships": {
+              // ... this article's relationships
+            }
+          }
+        }
+        ```
+
+        The following primary data is a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) that references the same resource:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1"
+          }
+        }
+        ```
+
+        A logical collection of resources **MUST** be represented as an array, even if it only contains one item or is empty.
+
+        JSON:API v1.1 spec: [7.1 Top Level](https://jsonapi.org/format/1.1/#document-top-level)
+      type: object
+      required:
+        - meta
+      properties:
+        meta:
+          $ref: '#/components/schemas/meta'
+        jsonapi:
+          $ref: '#/components/schemas/jsonapi'
+        links:
+          $ref: '#/components/schemas/topLevelLinks'
+      additionalProperties: false
+    topLevelPrimaryData:
+      title: 'JSON:API Top-Level Primary Data'
+      description: |-
+        ### 7.1 Top Level / Primary Data
+
+        The document's "primary data" is a representation of the resource or collection of resources targeted by a request.
+
+        Primary data **MUST** be either:
+        -   a single [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or `null`, for requests that target single resources
+        -   an array of [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects), an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects), or an empty array (`[]`), for requests that target resource collections
+
+        For example, the following primary data is a single resource object:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1",
+            "attributes": {
+              // ... this article's attributes
+            },
+            "relationships": {
+              // ... this article's relationships
+            }
+          }
+        }
+        ```
+
+        The following primary data is a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) that references the same resource:
+        ```json
+        {
+          "data": {
+            "type": "articles",
+            "id": "1"
+          }
+        }
+        ```
+
+        A logical collection of resources **MUST** be represented as an array, even if it only contains one item or is empty.
+
+        JSON:API v1.1 spec: [7.1 Top Level / Primary Data](https://jsonapi.org/format/1.1/#document-top-level)
+      anyOf:
+        - $ref: '#/components/schemas/resource'
+    topLevelLinks:
+      title: 'JSON:API Top Level / Links'
+      description: |-
+        ### 7.1 Top Level / Links
+
+        The top-level [links object](https://jsonapi.org/format/1.1/#document-links) **MAY** contain the following members:
+        -   `self`: the [link](https://jsonapi.org/format/1.1/#document-links) that generated the current response document. If a document has extensions or profiles applied to it, this link **SHOULD** be represented by a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) with the `type` target attribute specifying the JSON:API media type with all applicable parameters.
+        -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links) when the primary data represents a resource relationship.
+        -   `describedby`: a [link](https://jsonapi.org/format/1.1/#document-links-link) to a description document (e.g. OpenAPI or JSON Schema) for the current document.
+        -   [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links for the primary data.
+
+        > Note: The `self` link in the top-level `links` object allows a client to refresh the data represented by the current response document. The client should be able to use the provided link without applying any additional information. Therefore the link must contain the query parameters provided by the client to generate the response document. This includes but is not limited to query parameters used for [inclusion of related resources][fetching resources], [sparse fieldsets][fetching sparse fieldsets], [sorting][fetching sorting], [pagination][fetching pagination] and [filtering][fetching filtering].
+
+        JSON:API v1.1 spec: [7.1 Top Level / Links](https://jsonapi.org/format/1.1/#document-top-level)
+      allOf:
+        - type: object
+          additionalProperties:
+            $ref: '#/components/schemas/linksLink'
+          properties:
+            self:
+              $ref: '#/components/schemas/linksLink'
+            related:
+              $ref: '#/components/schemas/relatedResourceLink'
+            describedby:
+              $ref: '#/components/schemas/linksLink'
+        - $ref: '#/components/schemas/pagination'
+    resource:
+      title: 'JSON:API Resource Object'
+      description: |-
+        ### 7.2 Resource Objects
+
+        "Resource objects" appear in a JSON:API document to represent resources.
+
+        A resource object **MUST** contain at least the following top-level members:
+        -   `id`
+        -   `type`
+
+        Exception: The `id` member is not required when the resource object originates at the client and represents a new resource to be created on the server. In that case, a client **MAY** include a `lid`member to uniquely identify the resource by `type` *locally* within the document.
+
+        In addition, a resource object **MAY** contain any of these top-level members:
+        -   `attributes`: an [attributes object](https://jsonapi.org/format/1.1/#document-resource-object-attributes) representing some of the resource's data.
+        -   `relationships`: a [relationships object](https://jsonapi.org/format/1.1/#document-resource-object-relationships) describing relationships between the resource and other JSON:API resources.
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) containing links related to the resource.
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) containing non-standard meta-information about a resource that can not be represented as an attribute or relationship.
+
+        Here's how an article (i.e. a resource of type "articles") might appear in a document:
+        ```json
+        // ...
+        {
+          "type": "articles",
+          "id": "1",
+          "attributes": {
+            "title": "Rails is Omakase"
+          },
+          "relationships": {
+            "author": {
+              "links": {
+                "self": "/articles/1/relationships/author",
+                "related": "/articles/1/author"
+              },
+              "data": { "type": "people", "id": "9" }
+            }
+          }
+        }
+        // ...
+        ```
+
+        JSON:API v1.1 spec: [7.2 Resource Objects](https://jsonapi.org/format/1.1/#document-resource-objects)
+      allOf:
+        - $ref: '#/components/schemas/resourceIdentifier'
+        - type: object
+          properties:
+            attributes:
+              $ref: '#/components/schemas/attributes'
+            relationships:
+              $ref: '#/components/schemas/relationships'
+            links:
+              $ref: '#/components/schemas/links'
+            meta:
+              $ref: '#/components/schemas/meta'
+    type:
+      title: 'JSON:API Type'
+      description: |-
+        ### 7.2.1 Identification
+
+        Every [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) **MUST** contain a `type` member. Every resource object **MUST**also contain an `id` member, except when the resource object originates at the client and represents a new resource to be created on the server. If `id` is omitted due to this exception, a `lid` member **MAY** be included to uniquely identify the resource by `type` *locally* within the document. The value of the `lid` member **MUST** be identical for every representation of the resource in the document, including [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects).
+
+        The values of the `id`, `type`, and `lid` members **MUST** be strings.
+
+        Within a given API, each resource object's `type` and `id` pair **MUST** identify a single, unique resource. (The set of URIs controlled by a server, or multiple servers acting as one, constitute an API.)
+
+        The `type` member is used to describe [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) that share common attributes and relationships.
+
+        The values of `type` members **MUST** adhere to the same constraints as [member names](https://jsonapi.org/format/1.1/#document-member-names).
+
+        > Note: This spec is agnostic about inflection rules, so the value of `type` can be either plural or singular. However, the same value should be used consistently throughout an implementation.
+
+        JSON:API v1.1 spec: [7.2.1 Identification](https://jsonapi.org/format/1.1/#document-resource-object-identification)
+      type: string
+      pattern: '^[a-zA-Z0-9](?:[-\w]*[a-zA-Z0-9])?$'
+      example: article
+    lid:
+      title: 'JSON:API Local Id'
+      description: |-
+        ### 7.2.1 Identification
+
+        Every [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) **MUST** contain a `type` member. Every resource object **MUST**also contain an `id` member, except when the resource object originates at the client and represents a new resource to be created on the server. If `id` is omitted due to this exception, a `lid` member **MAY** be included to uniquely identify the resource by `type` *locally* within the document. The value of the `lid` member **MUST** be identical for every representation of the resource in the document, including [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects).
+
+        The values of the `id`, `type`, and `lid` members **MUST** be strings.
+
+        Within a given API, each resource object's `type` and `id` pair **MUST** identify a single, unique resource. (The set of URIs controlled by a server, or multiple servers acting as one, constitute an API.)
+
+        The `type` member is used to describe [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) that share common attributes and relationships.
+
+        The values of `type` members **MUST** adhere to the same constraints as [member names](https://jsonapi.org/format/1.1/#document-member-names).
+
+        > Note: This spec is agnostic about inflection rules, so the value of `type` can be either plural or singular. However, the same value should be used consistently throughout an implementation.
+
+        JSON:API v1.1 spec: [7.2.1 Identification](https://jsonapi.org/format/1.1/#document-resource-object-identification)
+      type: string
+      example: '1234'
+    id:
+      title: 'JSON:API Id'
+      description: |-
+        ### 7.2.1 Identification
+
+        Every [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) **MUST** contain a `type` member. Every resource object **MUST**also contain an `id` member, except when the resource object originates at the client and represents a new resource to be created on the server. If `id` is omitted due to this exception, a `lid` member **MAY** be included to uniquely identify the resource by `type` *locally* within the document. The value of the `lid` member **MUST** be identical for every representation of the resource in the document, including [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects).
+
+        The values of the `id`, `type`, and `lid` members **MUST** be strings.
+
+        Within a given API, each resource object's `type` and `id` pair **MUST** identify a single, unique resource. (The set of URIs controlled by a server, or multiple servers acting as one, constitute an API.)
+
+        The `type` member is used to describe [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) that share common attributes and relationships.
+
+        The values of `type` members **MUST** adhere to the same constraints as [member names](https://jsonapi.org/format/1.1/#document-member-names).
+
+        > Note: This spec is agnostic about inflection rules, so the value of `type` can be either plural or singular. However, the same value should be used consistently throughout an implementation.
+
+        JSON:API v1.1 spec: [7.2.1 Identification](https://jsonapi.org/format/1.1/#document-resource-object-identification)
+      type: string
+      example: '1234'
+    attributes:
+      title: 'JSON:API Attributes'
+      description: |-
+        ### 7.2.2.1 Attributes
+
+        The value of the `attributes` key **MUST** be an object (an "attributes object"). Members of the attributes object ("attributes") represent information about the [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) in which it's defined.
+
+        Attributes may contain any valid JSON value, including complex data structures involving JSON objects and arrays.
+
+        Keys that reference related resources (e.g. `author_id`) **SHOULD NOT** appear as attributes. Instead, [relationships](https://jsonapi.org/format/1.1/#document-resource-object-relationships) **SHOULD** be used.
+
+        > Note: See [fields](https://jsonapi.org/format/1.1/#document-resource-object-fields) and [member names](https://jsonapi.org/format/1.1/#document-member-names) for more restrictions on this container.
+
+        JSON:API v1.1 spec: [7.2.2.1 Attributes](https://jsonapi.org/format/1.1/#document-resource-object-attributes)
+      type: object
+      not:
+        anyOf:
+          - required:
+              - id
+          - required:
+              - type
+      additionalProperties: true
+      example:
+        title: 'JSON:API paints my bikeshed!'
+        body: The shortest article. Ever.
+        created: '2015-05-22T14:56:29.000Z'
+        updated: '2015-05-22T14:56:28.000Z'
+    relationships:
+      title: 'JSON:API Relationships'
+      description: |-
+        #### 7.2.2.2 Relationships
+
+        The value of the `relationships` key **MUST** be an object (a "relationships object"). Each member of a relationships object represents a "relationship" from the [resource object](https://jsonapi.org/format/1.1/#document-resource-objects) in which it has been defined to other resource objects.
+
+        Relationships may be to-one or to-many.
+
+        A relationship's name is given by its key. The value at that key **MUST** be an object ("relationship object").
+
+        JSON:API v1.1 spec: [7.2.2.2 Relationships](https://jsonapi.org/format/1.1/#document-resource-object-relationships)
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/relationshipsRelationship'
+    relationshipsRelationship:
+      title: 'JSON:API Relationship Object'
+      description: |-
+        #### 7.2.2.2 Relationships / Relationship Object
+
+        A "relationship object" **MUST** contain at least one of the following:
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) containing at least one of the following:
+            -   `self`: a link for the relationship itself (a "relationship link"). This link allows the client to directly manipulate the relationship. For example, removing an `author` through an `article`'s relationship URL would disconnect the person from the `article` without deleting the `people` resource itself. When fetched successfully, this link returns the [linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage) for the related resources as its primary data. (See [Fetching Relationships](https://jsonapi.org/format/1.1/#fetching-relationships).)
+            -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links)
+            -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+        -   `data`: [resource linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage)
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) that contains non-standard meta-information about the relationship.
+        -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+
+        A relationship object that represents a to-many relationship **MAY** also contain [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links under the `links` member, as described below. Any [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links in a relationship object **MUST** paginate the relationship data, not the related resources.
+
+        > Note: See [fields](https://jsonapi.org/format/1.1/#document-resource-object-fields) and [member names](https://jsonapi.org/format/1.1/#document-member-names) for more restrictions on this container.
+
+        JSON:API v1.1 spec: [7.2.2.2 Relationships / Relationship Object](https://jsonapi.org/format/1.1/#document-resource-object-relationships)
+      oneOf:
+        - $ref: '#/components/schemas/relationshipsRelationshipToOne'
+        - $ref: '#/components/schemas/relationshipsRelationshipToMany'
+    relationshipsRelationshipToOne:
+      title: 'JSON:API Relationship Object (to one)'
+      description: |-
+        #### 7.2.2.2 Relationships / Relationship Object
+
+        A "relationship object" **MUST** contain at least one of the following:
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) containing at least one of the following:
+            -   `self`: a link for the relationship itself (a "relationship link"). This link allows the client to directly manipulate the relationship. For example, removing an `author` through an `article`'s relationship URL would disconnect the person from the `article` without deleting the `people` resource itself. When fetched successfully, this link returns the [linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage) for the related resources as its primary data. (See [Fetching Relationships](https://jsonapi.org/format/1.1/#fetching-relationships).)
+            -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links)
+            -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+        -   `data`: [resource linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage)
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) that contains non-standard meta-information about the relationship.
+        -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+
+        A relationship object that represents a to-many relationship **MAY** also contain [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links under the `links` member, as described below. Any [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links in a relationship object **MUST** paginate the relationship data, not the related resources.
+
+        > Note: See [fields](https://jsonapi.org/format/1.1/#document-resource-object-fields) and [member names](https://jsonapi.org/format/1.1/#document-member-names) for more restrictions on this container.
+
+        JSON:API v1.1 spec: [7.2.2.2 Relationships / Relationship Object](https://jsonapi.org/format/1.1/#document-resource-object-relationships)
+      properties:
+        links:
+          $ref: '#/components/schemas/relationshipLinks'
+        data:
+          $ref: '#/components/schemas/resourceLinkageToOne'
+        meta:
+          $ref: '#/components/schemas/meta'
+      minProperties: 1
+      additionalProperties: true
+    relationshipsRelationshipToMany:
+      title: 'JSON:API Relationship Object (to many)'
+      description: |-
+        #### 7.2.2.2 Relationships / Relationship Object
+
+        A "relationship object" **MUST** contain at least one of the following:
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) containing at least one of the following:
+            -   `self`: a link for the relationship itself (a "relationship link"). This link allows the client to directly manipulate the relationship. For example, removing an `author` through an `article`'s relationship URL would disconnect the person from the `article` without deleting the `people` resource itself. When fetched successfully, this link returns the [linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage) for the related resources as its primary data. (See [Fetching Relationships](https://jsonapi.org/format/1.1/#fetching-relationships).)
+            -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links)
+            -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+        -   `data`: [resource linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage)
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) that contains non-standard meta-information about the relationship.
+        -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+
+        A relationship object that represents a to-many relationship **MAY** also contain [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links under the `links` member, as described below. Any [pagination](https://jsonapi.org/format/1.1/#fetching-pagination) links in a relationship object **MUST** paginate the relationship data, not the related resources.
+
+        > Note: See [fields](https://jsonapi.org/format/1.1/#document-resource-object-fields) and [member names](https://jsonapi.org/format/1.1/#document-member-names) for more restrictions on this container.
+
+        JSON:API v1.1 spec: [7.2.2.2 Relationships / Relationship Object](https://jsonapi.org/format/1.1/#document-resource-object-relationships)
+      properties:
+        links:
+          allOf:
+            - $ref: '#/components/schemas/relationshipLinks'
+            - $ref: '#/components/schemas/pagination'
+        data:
+          $ref: '#/components/schemas/resourceLinkageToMany'
+        meta:
+          $ref: '#/components/schemas/meta'
+      minProperties: 1
+      additionalProperties: true
+    relationshipLinks:
+      title: 'JSON:API Relationship Links'
+      description: |-
+        #### 7.2.2.2 Relationships / Relationship Links
+
+        The [links object](https://jsonapi.org/format/1.1/#document-links) contains at least one of the following:
+        -   `self`: a link for the relationship itself (a "relationship link"). This link allows the client to directly manipulate the relationship. For example, removing an `author` through an `article`'s relationship URL would disconnect the person from the `article` without deleting the `people` resource itself. When fetched successfully, this link returns the [linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage) for the related resources as its primary data. (See [Fetching Relationships](https://jsonapi.org/format/1.1/#fetching-relationships).)
+        -   `related`: a [related resource link](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links)
+        -   a member defined by an applied [extension](https://jsonapi.org/format/1.1/#extensions).
+
+        JSON:API v1.1 spec: [7.2.2.2 Relationships / Relationship Links](https://jsonapi.org/format/1.1/#document-resource-object-relationships)
+      type: object
+      properties:
+        self:
+          $ref: '#/components/schemas/linksLink'
+        related:
+          $ref: '#/components/schemas/relatedResourceLink'
+      minProperties: 1
+      additionalProperties:
+        $ref: '#/components/schemas/linksLink'
+    relatedResourceLink:
+      title: 'JSON:API Related Resource Link'
+      description: |-
+        ### 7.2.2.3 Related Resource Links
+
+        A "related resource link" provides access to [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) [linked](https://jsonapi.org/format/1.1/#document-links) in a [relationship](https://jsonapi.org/format/1.1/#document-resource-object-relationships). When fetched, the related resource object(s) are returned as the response's primary data.
+
+        For example, an `article`'s `comments` [relationship](https://jsonapi.org/format/1.1/#document-resource-object-relationships) could specify a [link](https://jsonapi.org/format/1.1/#document-links) that returns a collection of comment [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) when retrieved through a `GET` request.
+
+        If present, a related resource link **MUST** reference a valid URL, even if the relationship isn't currently associated with any target resources. Additionally, a related resource link **MUST NOT** change because its relationship's content changes.
+
+        JSON:API v1.1 spec: [7.2.2.3 Related Resource Links](https://jsonapi.org/format/1.1/#document-resource-object-related-resource-links)
+      allOf:
+        - $ref: '#/components/schemas/linksLink'
+    resourceLinkage:
+      title: 'JSON:API Resource Linkage'
+      description: |-
+        ### 7.2.2.4 Resource Linkage
+
+        Resource linkage in a [compound document](https://jsonapi.org/format/1.1/#document-compound-documents) allows a client to link together all of the included [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) without having to `GET` any URLs via [links](https://jsonapi.org/format/1.1/#document-links).
+
+        Resource linkage **MUST** be represented as one of the following:
+        -   `null` for empty to-one relationships.
+        -   an empty array (`[]`) for empty to-many relationships.
+        -   a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) for non-empty to-one relationships.
+        -   an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) for non-empty to-many relationships.
+
+        > Note: The spec does not impart meaning to order of resource identifier objects in linkage arrays of to-many relationships, although implementations may do that. Arrays of resource identifier objects may represent ordered or unordered relationships, and both types can be mixed in one response object.
+
+        For example, the following article is associated with an `author`:
+        ```json
+        // ...
+        {
+          "type": "articles",
+          "id": "1",
+          "attributes": {
+            "title": "Rails is Omakase"
+          },
+          "relationships": {
+            "author": {
+              "links": {
+                "self": "http://example.com/articles/1/relationships/author",
+                "related": "http://example.com/articles/1/author"
+              },
+              "data": { "type": "people", "id": "9" }
+            }
+          },
+          "links": {
+            "self": "http://example.com/articles/1"
+          }
+        }
+        // ...
+        ```
+
+        The `author` relationship includes a link for the relationship itself (which allows the client to change the related author directly), a related resource link to fetch the resource objects, and linkage information.
+
+        JSON:API v1.1 spec: [7.2.2.4 Resource Linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage)
+      oneOf:
+        - $ref: '#/components/schemas/resourceLinkageToOne'
+        - $ref: '#/components/schemas/resourceLinkageToMany'
+    resourceLinkageToOne:
+      title: 'JSON:API Resource Linkage (to one)'
+      description: |-
+        ### 7.2.2.4 Resource Linkage
+
+        Resource linkage in a [compound document](https://jsonapi.org/format/1.1/#document-compound-documents) allows a client to link together all of the included [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) without having to `GET` any URLs via [links](https://jsonapi.org/format/1.1/#document-links).
+
+        Resource linkage **MUST** be represented as one of the following:
+        -   `null` for empty to-one relationships.
+        -   an empty array (`[]`) for empty to-many relationships.
+        -   a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) for non-empty to-one relationships.
+        -   an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) for non-empty to-many relationships.
+
+        > Note: The spec does not impart meaning to order of resource identifier objects in linkage arrays of to-many relationships, although implementations may do that. Arrays of resource identifier objects may represent ordered or unordered relationships, and both types can be mixed in one response object.
+
+        For example, the following article is associated with an `author`:
+        ```json
+        // ...
+        {
+          "type": "articles",
+          "id": "1",
+          "attributes": {
+            "title": "Rails is Omakase"
+          },
+          "relationships": {
+            "author": {
+              "links": {
+                "self": "http://example.com/articles/1/relationships/author",
+                "related": "http://example.com/articles/1/author"
+              },
+              "data": { "type": "people", "id": "9" }
+            }
+          },
+          "links": {
+            "self": "http://example.com/articles/1"
+          }
+        }
+        // ...
+        ```
+
+        The `author` relationship includes a link for the relationship itself (which allows the client to change the related author directly), a related resource link to fetch the resource objects, and linkage information.
+
+        JSON:API v1.1 spec: [7.2.2.4 Resource Linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage)
+      oneOf:
+        - title: 'null'
+          description: Empty to-one relationship.
+          type: object
+          nullable: true
+          enum:
+            - null
+        - $ref: '#/components/schemas/resourceIdentifier'
+      example:
+        type: people
+        id: '9'
+    resourceLinkageToMany:
+      title: 'JSON:API Resource Linkage (to many)'
+      description: |-
+        ### 7.2.2.4 Resource Linkage
+
+        Resource linkage in a [compound document](https://jsonapi.org/format/1.1/#document-compound-documents) allows a client to link together all of the included [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) without having to `GET` any URLs via [links](https://jsonapi.org/format/1.1/#document-links).
+
+        Resource linkage **MUST** be represented as one of the following:
+        -   `null` for empty to-one relationships.
+        -   an empty array (`[]`) for empty to-many relationships.
+        -   a single [resource identifier object](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) for non-empty to-one relationships.
+        -   an array of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) for non-empty to-many relationships.
+
+        > Note: The spec does not impart meaning to order of resource identifier objects in linkage arrays of to-many relationships, although implementations may do that. Arrays of resource identifier objects may represent ordered or unordered relationships, and both types can be mixed in one response object.
+
+        For example, the following article is associated with an `author`:
+        ```json
+        // ...
+        {
+          "type": "articles",
+          "id": "1",
+          "attributes": {
+            "title": "Rails is Omakase"
+          },
+          "relationships": {
+            "author": {
+              "links": {
+                "self": "http://example.com/articles/1/relationships/author",
+                "related": "http://example.com/articles/1/author"
+              },
+              "data": { "type": "people", "id": "9" }
+            }
+          },
+          "links": {
+            "self": "http://example.com/articles/1"
+          }
+        }
+        // ...
+        ```
+
+        The `author` relationship includes a link for the relationship itself (which allows the client to change the related author directly), a related resource link to fetch the resource objects, and linkage information.
+
+        JSON:API v1.1 spec: [7.2.2.4 Resource Linkage](https://jsonapi.org/format/1.1/#document-resource-object-linkage)
+      type: array
+      items:
+        $ref: '#/components/schemas/resourceIdentifier'
+      minItems: 0
+      example:
+        - type: people
+          id: '10'
+        - type: people
+          id: '11'
+    resourceIdentifier:
+      title: 'JSON:API Resource Identifier Object'
+      description: |-
+        ### 7.3 Resource Identifier Objects
+
+        A "resource identifier object" is an object that identifies an individual resource.
+
+        A "resource identifier object" **MUST** contain a `type` member. It **MUST** also contain an `id` member, except when it represents a new resource to be created on the server. In this case, a `lid` member **MUST** be included that identifies the new resource.
+
+        The values of the `id`, `type`, and `lid` members **MUST** be strings.
+
+        A "resource identifier object" **MAY** also include a `meta` member, whose value is a [meta](https://jsonapi.org/format/1.1/#document-meta) object that contains non-standard meta-information.
+
+        JSON:API v1.1 spec: [7.3 Resource Identifier Objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects)
+      oneOf:
+        - $ref: '#/components/schemas/resourceIdentifierNew'
+        - $ref: '#/components/schemas/resourceIdentifierExisting'
+    resourceIdentifierNew:
+      title: 'JSON:API Resource Identifier Object (New)'
+      description: |-
+        ### 7.3 Resource Identifier Objects
+
+        A "resource identifier object" is an object that identifies an individual resource.
+
+        A "resource identifier object" **MUST** contain a `type` member. It **MUST** also contain an `id` member, except when it represents a new resource to be created on the server. In this case, a `lid` member **MUST** be included that identifies the new resource.
+
+        The values of the `id`, `type`, and `lid` members **MUST** be strings.
+
+        A "resource identifier object" **MAY** also include a `meta` member, whose value is a [meta](https://jsonapi.org/format/1.1/#document-meta) object that contains non-standard meta-information.
+
+        JSON:API v1.1 spec: [7.3 Resource Identifier Objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects)
+      type: object
+      required:
+        - type
+        - lid
+      properties:
+        type:
+          $ref: '#/components/schemas/type'
+        lid:
+          $ref: '#/components/schemas/lid'
+        meta:
+          $ref: '#/components/schemas/meta'
+    resourceIdentifierExisting:
+      title: 'JSON:API Resource Identifier Object (Existing)'
+      description: |-
+        ### 7.3 Resource Identifier Objects
+
+        A "resource identifier object" is an object that identifies an individual resource.
+
+        A "resource identifier object" **MUST** contain a `type` member. It **MUST** also contain an `id` member, except when it represents a new resource to be created on the server. In this case, a `lid` member **MUST** be included that identifies the new resource.
+
+        The values of the `id`, `type`, and `lid` members **MUST** be strings.
+
+        A "resource identifier object" **MAY** also include a `meta` member, whose value is a [meta](https://jsonapi.org/format/1.1/#document-meta) object that contains non-standard meta-information.
+
+        JSON:API v1.1 spec: [7.3 Resource Identifier Objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects)
+      type: object
+      required:
+        - type
+        - id
+      properties:
+        type:
+          $ref: '#/components/schemas/type'
+        id:
+          $ref: '#/components/schemas/id'
+        meta:
+          $ref: '#/components/schemas/meta'
+    links:
+      title: 'JSON:API Links'
+      description: |-
+        ### 7.6 Links
+
+        Where specified, a `links` member can be used to represent links. The value of this member **MUST**be an object (a "links object").
+
+        [](https://jsonapi.org/format/1.1/#document-links-link)Within this object, a link **MUST** be represented as either:
+        -   a string whose value is a URI-reference [[RFC3986 Section 4.1](https://tools.ietf.org/html/rfc3986#section-4.1)] pointing to the link's target,
+        -   a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) or
+        -   `null` if the link does not exist.
+
+        A link's relation type **SHOULD** be inferred from the name of the link unless the link is a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) and the link object has a `rel` member.
+
+        A link's context is the [top-level object](https://jsonapi.org/format/1.1/#document-top-level), [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), or [relationship object](https://jsonapi.org/format/1.1/#document-resource-object-relationships) in which it appears.
+
+        In the example below, the `self` link is a string whereas the `related` link is a [link object](https://jsonapi.org/format/1.1/#document-links-link-object). The `related` link object provides additional information about the targeted related resource collection as well as a schema that serves as a description document for that collection:
+        ```json
+        "links": {
+          "self": "http://example.com/articles/1/relationships/comments",
+          "related": {
+            "href": "http://example.com/articles/1/comments",
+            "title": "Comments",
+            "describedby": "http://example.com/schemas/article-comments",
+            "meta": {
+              "count": 10
+            }
+          }
+        }
+        ```
+
+        JSON:API v1.1 spec: [7.6 Links](https://jsonapi.org/format/1.1/#document-links)
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/linksLink'
+    linksLink:
+      title: 'JSON:API Links / Link'
+      description: |-
+        ### 7.6 Links / Link
+
+        [](https://jsonapi.org/format/1.1/#document-links-link)Within `links` object, a link **MUST** be represented as either:
+        -   a string whose value is a URI-reference [[RFC3986 Section 4.1](https://tools.ietf.org/html/rfc3986#section-4.1)] pointing to the link's target,
+        -   a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) or
+        -   `null` if the link does not exist.
+
+        A link's relation type **SHOULD** be inferred from the name of the link unless the link is a [link object](https://jsonapi.org/format/1.1/#document-links-link-object) and the link object has a `rel` member.
+
+        A link's context is the [top-level object](https://jsonapi.org/format/1.1/#document-top-level), [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), or [relationship object](https://jsonapi.org/format/1.1/#document-resource-object-relationships) in which it appears.
+
+        In the example below, the `self` link is a string whereas the `related` link is a [link object](https://jsonapi.org/format/1.1/#document-links-link-object). The `related` link object provides additional information about the targeted related resource collection as well as a schema that serves as a description document for that collection:
+        ```json
+        "links": {
+          "self": "http://example.com/articles/1/relationships/comments",
+          "related": {
+            "href": "http://example.com/articles/1/comments",
+            "title": "Comments",
+            "describedby": "http://example.com/schemas/article-comments",
+            "meta": {
+              "count": 10
+            }
+          }
+        }
+        ```
+
+        JSON:API v1.1 spec: [7.6 Links / Link](https://jsonapi.org/format/1.1/#document-links-link)
+      oneOf:
+        - title: URI-reference
+          description: 'URI-reference [[RFC3986 Section 4.1](https://tools.ietf.org/html/rfc3986#section-4.1)] pointing to the link’s target.'
+          type: string
+          format: uri-reference
+          example: 'http://example.com/articles/1/relationships/comments'
+        - $ref: '#/components/schemas/link'
+        - title: 'null'
+          description: The link does not exist.
+          type: object
+          nullable: true
+          enum:
+            - null
+    link:
+      title: 'JSON:API Link Object'
+      description: |-
+        ### 7.6.1 Link Objects
+
+        A "link object" is an object that represents a [web link](https://tools.ietf.org/html/rfc8288).
+
+        A link object **MUST** contain the following member:
+        -   `href`: a string whose value is a URI-reference [[RFC3986 Section 4.1](https://tools.ietf.org/html/rfc3986#section-4.1)] pointing to the link's target.
+
+        A link object **MAY** also contain any of the following members:
+        -   `rel`: a string indicating the link's relation type. The string **MUST** be a [valid link relation type](https://tools.ietf.org/html/rfc8288#section-2.1).
+        -   `describedby`: a [link](https://jsonapi.org/format/1.1/#document-links-link) to a description document (e.g. OpenAPI or JSON Schema) for the link target.
+        -   `title`: a string which serves as a label for the destination of a link such that it can be used as a human-readable identifier (e.g., a menu entry).
+        -   `type`: a string indicating the media type of the link's target.
+        -   `hreflang`: a string or an array of strings indicating the language(s) of the link's target. An array of strings indicates that the link's target is available in multiple languages. Each string **MUST** be a valid language tag [[RFC5646](https://tools.ietf.org/html/rfc5646)].
+        -   `meta`: a meta object containing non-standard meta-information about the link.
+
+        > Note: the `type` and `hreflang` members are only hints; the target resource is not guaranteed to be available in the indicated media type or language when the link is actually followed.
+
+        JSON:API v1.1 spec: [7.6.1 Link Objects](https://jsonapi.org/format/1.1/#auto-id--link-objects)
+      type: object
+      required:
+        - href
+      properties:
+        href:
+          description: A string containing the link’s URL.
+          type: string
+          format: uri-reference
+        rel:
+          description: 'Link’s relation type. The string **MUST** be a valid [link relation type](https://tools.ietf.org/html/rfc8288#section-2.1).'
+          type: string
+        describedby:
+          description: 'This causes some tools to produce errors, probably due to circular definition. The schema here should be $ref: ''#/components/schemas/linksLink'''
+          type: string
+          format: uri-reference
+        title:
+          description: Label for the destination of a link such that it can be used as a human-readable identifier.
+          type: string
+        type:
+          description: Media type of the link’s target.
+          type: string
+        hreflang:
+          description: 'Language(s) of the link’s target. Each string MUST be a valid language tag [[RFC5646](https://tools.ietf.org/html/rfc5646)].'
+          oneOf:
+            - type: string
+              description: 'Language of the link’s target. MUST be a valid language tag [[RFC5646](https://tools.ietf.org/html/rfc5646)].'
+            - type: array
+              description: 'Language(s) of the link’s target. Each string MUST be a valid language tag [[RFC5646](https://tools.ietf.org/html/rfc5646)].'
+              items:
+                type: string
+        meta:
+          $ref: '#/components/schemas/meta'
+      example:
+        href: 'http://example.com/articles/1/comments'
+        title: Comments
+        describedby: 'http://example.com/schemas/article-comments'
+        meta:
+          count: 10
+    meta:
+      title: 'JSON:API Meta'
+      description: |-
+        ### 7.5 Meta
+
+        Where specified, a `meta` member can be used to include non-standard meta-information. The value of each `meta` member **MUST** be an object (a "meta object").
+
+        Any members **MAY** be specified within `meta` objects.
+
+        For example:
+        ```json
+        {
+          "meta": {
+            "copyright": "Copyright 2015 Example Corp.",
+            "authors": [
+              "Yehuda Katz",
+              "Steve Klabnik",
+              "Dan Gebhardt",
+              "Tyler Kellen"
+            ]
+          },
+          "data": {
+            // ...
+          }
+        }
+        ```
+
+        JSON:API v1.1 spec: [7.5 Meta](https://jsonapi.org/format/1.1/#document-meta)
+      type: object
+      additionalProperties: true
+      example:
+        copyright: Copyright 2015 Example Corp.
+        authors:
+          - Yehuda Katz
+          - Steve Klabnik
+          - Dan Gebhardt
+          - Tyler Kellen
+    jsonapi:
+      title: 'JSON:API JsonApi'
+      description: |-
+        ### 7.7 JSON:API Object
+
+        A JSON:API document **MAY** include information about its implementation under a top level `jsonapi`member. If present, the value of the `jsonapi` member **MUST** be an object (a "jsonapi object").
+
+        The jsonapi object **MAY** contain any of the following members:
+        -   `version` - whose value is a string indicating the highest JSON:API version supported.
+        -   `ext` - an array of URIs for all applied [extensions](https://jsonapi.org/format/1.1/#extensions).
+        -   `profile` - an array of URIs for all applied [profiles](https://jsonapi.org/format/1.1/#profiles).
+        -   `meta` - a [meta](https://jsonapi.org/format/1.1/#document-meta) object that contains non-standard meta-information.
+
+        Clients and servers **MUST NOT** use an `ext` or `profile` member for content negotiation. Content negotiation **MUST** only happen based on media type parameters in `Content-Type` header.
+
+        A simple example appears below:
+        ```json
+        {
+          "jsonapi": {
+            "version": "1.1",
+            "ext": [
+              "https://jsonapi.org/ext/atomic"
+            ],
+            "profile": [
+              "http://example.com/profiles/flexible-pagination",
+              "http://example.com/profiles/resource-versioning"
+            ]
+          }
+        }
+        ```
+
+        If the `version` member is not present, clients should assume the server implements at least version 1.0 of the specification.
+
+        > Note: Because JSON:API is committed to making additive changes only, the version string primarily indicates which new features a server may support.
+
+        JSON:API v1.1 spec: [7.7 JSON:API Object](https://jsonapi.org/format/1.1/#document-jsonapi-object)
+      type: object
+      properties:
+        version:
+          allOf:
+            - $ref: '#/components/schemas/semver'
+            - type: string
+              description: 'The highest JSON:API version supported.'
+              example: '1.0'
+        ext:
+          description: A list of URIs for all applied extensions.
+          type: array
+          items:
+            type: string
+            format: uri
+          example:
+            - 'https://jsonapi.org/ext/atomic'
+        profile:
+          description: A list of URIs for all applied extensions.
+          type: array
+          items:
+            type: string
+            format: uri
+          example:
+            - 'http://example.com/profiles/flexible-pagination'
+            - 'http://example.com/profiles/resource-versioning'
+        meta:
+          $ref: '#/components/schemas/meta'
+      additionalProperties: false
+    pagination:
+      title: 'JSON:API Pagination'
+      description: |-
+        ### 8.6 Pagination
+
+        A server **MAY** choose to limit the number of resources returned in a response to a subset ("page") of the whole set available.
+
+        A server **MAY** provide links to traverse a paginated data set ("pagination links").
+
+        Pagination links **MUST** appear in the links object that corresponds to a collection. To paginate the primary data, supply pagination links in the top-level `links` object. To paginate an included collection returned in a [compound document](https://jsonapi.org/format/1.1/#document-compound-documents), supply pagination links in the corresponding links object.
+
+        The following keys **MUST** be used for pagination links:
+        -   `first`: the first page of data
+        -   `last`: the last page of data
+        -   `prev`: the previous page of data
+        -   `next`: the next page of data
+
+        Keys **MUST** either be omitted or have a `null` value to indicate that a particular link is unavailable.
+
+        Concepts of order, as expressed in the naming of pagination links, **MUST** remain consistent with JSON:API's [sorting rules](https://jsonapi.org/format/1.1/#fetching-sorting).
+
+        The `page` [query parameter family](https://jsonapi.org/format/1.1/#query-parameters-families) is reserved for pagination. Servers and clients **SHOULD** use these parameters for pagination operations.
+
+        > Note: JSON API is agnostic about the pagination strategy used by a server, but the `page` query parameter family can be used regardless of the strategy employed. For example, a page-based strategy might use query parameters such as `page[number]` and `page[size]`, while a cursor-based strategy might use `page[cursor]`.
+
+        > Note: This section applies to any endpoint that responds with a resource collection as primary data, regardless of the request type.
+
+        JSON:API v1.1 spec: [8.6 Pagination](https://jsonapi.org/format/1.1/#fetching-pagination)
+      type: object
+      properties:
+        first:
+          $ref: '#/components/schemas/linksLink'
+        last:
+          $ref: '#/components/schemas/linksLink'
+        prev:
+          $ref: '#/components/schemas/linksLink'
+        next:
+          $ref: '#/components/schemas/linksLink'
+    errors:
+      title: 'JSON:API Errors'
+      description: |-
+        ### 11.2 Error Objects
+
+        Error objects provide additional information about problems encountered while performing an operation. Error objects **MUST** be returned as an array keyed by `errors` in the top level of a JSON:API document.
+
+        JSON:API v1.1 spec: [11.2 Error Objects](https://jsonapi.org/format/1.1/#error-objects)
+      type: array
+      items:
+        $ref: '#/components/schemas/error'
+    error:
+      title: 'JSON:API Errors / Error'
+      description: |-
+        ### 11.2 Error Objects / Error Object
+
+        An error object **MAY** have the following members, and **MUST** contain at least one of:
+        -   `id`: a unique identifier for this particular occurrence of the problem.
+        -   `links`: a [links object](https://jsonapi.org/format/1.1/#document-links) that **MAY** contain the following members:
+            -   `about`: a [link](https://jsonapi.org/format/1.1/#document-links-link) that leads to further details about this particular occurrence of the problem. When derefenced, this URI **SHOULD** return a human-readable description of the error.
+            -   `type`: a [link](https://jsonapi.org/format/1.1/#document-links-link) that identifies the type of error that this particular error is an instance of. This URI **SHOULD** be dereferencable to a human-readable explanation of the general error.
+        -   `status`: the HTTP status code applicable to this problem, expressed as a string value. This **SHOULD** be provided.
+        -   `code`: an application-specific error code, expressed as a string value.
+        -   `title`: a short, human-readable summary of the problem that **SHOULD NOT** change from occurrence to occurrence of the problem, except for purposes of localization.
+        -   `detail`: a human-readable explanation specific to this occurrence of the problem. Like `title`, this field's value can be localized.
+        -   `source`: an object containing references to the primary source of the error. It **SHOULD** include one of the following members or be omitted:
+            -   `pointer`: a JSON Pointer [[RFC6901](https://tools.ietf.org/html/rfc6901)] to the value in the request document that caused the error [e.g. `"/data"` for a primary data object, or `"/data/attributes/title"`for a specific attribute]. This **MUST** point to a value in the request document that exists; if it doesn't, the client **SHOULD** simply ignore the pointer.
+            -   `parameter`: a string indicating which URI query parameter caused the error.
+            -   `header`: a string indicating the name of a single request header which caused the error.
+        -   `meta`: a [meta object](https://jsonapi.org/format/1.1/#document-meta) containing non-standard meta-information about the error.
+
+        JSON:API v1.1 spec: [11.2 Error Objects / Error Object](https://jsonapi.org/format/1.1/#error-objects)
+      type: object
+      properties:
+        id:
+          description: A unique identifier for this particular occurrence of the problem.
+          type: string
+        links:
+          $ref: '#/components/schemas/errorLinks'
+        status:
+          description: 'The HTTP status code applicable to this problem, expressed as a string value.'
+          type: string
+          pattern: '^[1-5]\d{2}$'
+        code:
+          description: 'An application-specific error code, expressed as a string value.'
+          type: string
+        title:
+          description: 'A short, human-readable summary of the problem. It **SHOULD NOT** change from occurrence to occurrence of the problem, except for purposes of localization.'
+          type: string
+        detail:
+          description: 'A human-readable explanation specific to this occurrence of the problem. Like `title`, this field’s value can be localized.'
+          type: string
+        source:
+          description: An object containing references to the primary source of the error. It **SHOULD** include one of the members or be omitted.
+          type: object
+          properties:
+            pointer:
+              description: |-
+                A JSON Pointer [[RFC6901](https://tools.ietf.org/html/rfc6901)] to the associated entity in the request document [e.g. `/data` for a primary data object, or `/data/attributes/title` for a specific attribute].
+
+                This **MUST** point to a value in the request document that exists; if it doesn’t, the client **SHOULD** simply ignore the pointer.
+              type: string
+            parameter:
+              description: A string indicating which query parameter caused the error.
+              type: string
+            header:
+              description: A string indicating the name of a single request header which caused the error.
+              type: string
+          additionalProperties: false
+        meta:
+          $ref: '#/components/schemas/meta'
+      additionalProperties: false
+    errorLinks:
+      title: 'JSON:API Errors / Error Links'
+      description: |-
+        ### 11.2 Error Objects / Error Links
+
+        A [links object](https://jsonapi.org/format/1.1/#document-links) that **MAY** contain the following members:
+        -   `about`: a [link](https://jsonapi.org/format/1.1/#document-links-link) that leads to further details about this particular occurrence of the problem. When derefenced, this URI **SHOULD** return a human-readable description of the error.
+        -   `type`: a [link](https://jsonapi.org/format/1.1/#document-links-link) that identifies the type of error that this particular error is an instance of. This URI **SHOULD** be dereferencable to a human-readable explanation of the general error.
+
+        JSON:API v1.1 spec: [11.2 Error Objects / Error Links](https://jsonapi.org/format/1.1/#error-objects)
+      type: object
+      properties:
+        about:
+          $ref: '#/components/schemas/linksLink'
+        type:
+          $ref: '#/components/schemas/linksLink'
+      additionalProperties:
+        $ref: '#/components/schemas/linksLink'
+    semver:
+      title: Semantic Version
+      description: 'Version string according to Semantic Versioning 2.0.0 specification - [https://semver.org](https://semver.org)'
+      type: string
+      pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+      example: 1.2.3
+      x-faker: system.semver
+  parameters:
+    collection:
+      name: collection
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/type'
+      description: Collection name (Resource Type)
+    fields:
+      name: fields
+      in: query
+      description: |-
+        ### 8.4 Sparse Fieldsets
+
+        A client **MAY** request that an endpoint return only specific [fields](https://jsonapi.org/format/1.1/#document-resource-object-fields) in the response on a per-type basis by including a `fields[TYPE]` query parameter.
+
+        The value of any `fields[TYPE]` parameter **MUST** be a comma-separated (U+002C COMMA, ",") list that refers to the name(s) of the fields to be returned. An empty value indicates that no fields should be returned.
+
+        If a client requests a restricted set of [fields](https://jsonapi.org/format/1.1/#document-resource-object-fields) for a given resource type, an endpoint **MUST NOT** include additional [fields](https://jsonapi.org/format/1.1/#document-resource-object-fields) in resource objects of that type in its response.
+
+        If a client does not specify the set of [fields](https://jsonapi.org/format/1.1/#document-resource-object-fields) for a given resource type, the server **MAY** send all fields, a subset of fields, or no fields for that resource type.
+
+        ```http
+        GET /articles?include=author&fields[articles]=title,body&fields[people]=name HTTP/1.1
+        Accept: application/vnd.api+json
+        ```
+
+        > Note: The above example URI shows unencoded `[` and `]` characters simply for readability. In practice, these characters should be percent-encoded. See "[Square Brackets in Parameter Names](https://jsonapi.org/format/1.1/#appendix-query-details-square-brackets)".
+
+        > Note: This section applies to any endpoint that responds with resources as primary or included data, regardless of the request type. For instance, a server could support sparse fieldsets along with a `POST` request to create a resource.
+
+        JSON:API v1.1 spec: [JSON:API v1.1 - Sparse Fieldsets](https://jsonapi.org/format/1.1/#fetching-sparse-fieldsets)
+
+        > **Incompatibilities with JSON:API v1.1**
+        > - allowReserved is set to "false" - JSON:API v1.1 mentions that only square brackets should be supported
+      required: false
+      allowEmptyValue: true
+      style: deepObject
+      allowReserved: false
+      schema:
+        title: '"fields" query parameter family'
+        type: object
+        additionalProperties: true
+    filter:
+      name: filter
+      in: query
+      description: |-
+        ### 8.7 Filtering
+
+        The `filter` [query parameter family](https://jsonapi.org/format/1.1/#query-parameters-families) is reserved for filtering data. Servers and clients **SHOULD** use these parameters for filtering operations.
+
+        > Note: JSON API is agnostic about the strategies supported by a server.
+
+        JSON:API v1.1 spec: [JSON:API v1.1 - Filtering](https://jsonapi.org/format/1.1/#fetching-filtering).
+
+        > **Incompatibilities with JSON:API v1.1**
+        > - allowEmptyValue is set to "false" - not mentioned in JSON:API v1.1
+        > - allowReserved is set to "false" - JSON:API v1.1 mentions that only square brackets should be supported
+      required: false
+      allowEmptyValue: false
+      style: deepObject
+      allowReserved: false
+      schema:
+        title: '"filter" query parameter family'
+        type: object
+        additionalProperties: true
+    id:
+      name: id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/id'
+      description: Resource id
+    include:
+      name: include
+      in: query
+      description: |-
+        ### 8.3. Inclusion of Related Resources
+
+        An endpoint **MAY** return resources related to the primary data by default.
+
+        An endpoint **MAY** also support an `include` query parameter to allow the client to customize which related resources should be returned.
+
+        If an endpoint does not support the `include` parameter, it **MUST** respond with `400 Bad Request`to any requests that include it.
+
+        If an endpoint supports the `include` parameter and a client supplies it:
+        -   The server's response **MUST** be a [compound document](https://jsonapi.org/format/1.1/#document-compound-documents) with an `included` key --- even if that `included` key holds an empty array (because the requested relationships are empty).
+        -   The server **MUST NOT** include unrequested [resource objects](https://jsonapi.org/format/1.1/#document-resource-objects) in the `included` section of the [compound document](https://jsonapi.org/format/1.1/#document-compound-documents).
+
+        The value of the `include` parameter **MUST** be a comma-separated (U+002C COMMA, ",") list of relationship paths. A relationship path is a dot-separated (U+002E FULL-STOP, ".") list of [relationship](https://jsonapi.org/format/1.1/#document-resource-object-relationships)names. An empty value indicates that no related resources should be returned.
+
+        If a server is unable to identify a relationship path or does not support inclusion of resources from a path, it **MUST** respond with 400 Bad Request.
+
+        > Note: For example, a relationship path could be `comments.author`, where `comments` is a relationship listed under a `articles` [resource object](https://jsonapi.org/format/1.1/#document-resource-objects), and `author` is a relationship listed under a `comments` [resource object](https://jsonapi.org/format/1.1/#document-resource-objects).
+
+        For instance, comments could be requested with an article:
+        ```http
+        GET /articles/1?include=comments HTTP/1.1
+        Accept: application/vnd.api+json
+        ```
+
+        In order to request resources related to other resources, a dot-separated path for each relationship name can be specified:
+        ```http
+        GET /articles/1?include=comments.author HTTP/1.1
+        Accept: application/vnd.api+json
+        ```
+
+        > Note: Because [compound documents](https://jsonapi.org/format/1.1/#document-compound-documents) require full linkage (except when relationship linkage is excluded by sparse fieldsets), intermediate resources in a multi-part path must be returned along with the leaf nodes. For example, a response to a request for `comments.author` should include `comments` as well as the `author` of each of those `comments`.
+
+        > Note: A server may choose to expose a deeply nested relationship such as `comments.author`as a direct relationship with an alternative name such as `commentAuthors`. This would allow a client to request `/articles/1?include=commentAuthors` instead of`/articles/1?include=comments.author`. By exposing the nested relationship with an alternative name, the server can still provide full linkage in compound documents without including potentially unwanted intermediate resources.
+
+        Multiple related resources can be requested in a comma-separated list:
+        ```http
+        GET /articles/1?include=comments.author,ratings HTTP/1.1
+        Accept: application/vnd.api+json
+        ```
+
+        Furthermore, related resources can be requested from a relationship endpoint:
+        ```http
+        GET /articles/1/relationships/comments?include=comments.author HTTP/1.1
+        Accept: application/vnd.api+json
+        ```
+
+        In this case, the primary data would be a collection of [resource identifier objects](https://jsonapi.org/format/1.1/#document-resource-identifier-objects) that represent linkage to comments for an article, while the full comments and comment authors would be returned as included data.
+
+        > Note: This section applies to any endpoint that responds with primary data, regardless of the request type. For instance, a server could support the inclusion of related resources along with a `POST` request to create a resource or relationship.
+
+        JSON:API v1.1 spec: [JSON:API v1.1 - Inclusion of Related Resources](https://jsonapi.org/format/1.1/#fetching-includes)
+      required: false
+      allowEmptyValue: true
+      style: form
+      explode: false
+      schema:
+        title: '"include" query parameter'
+        type: array
+        items:
+          type: string
+    page:
+      name: page
+      in: query
+      description: |-
+        ### 8.6 Pagination
+
+        A server **MAY** choose to limit the number of resources returned in a response to a subset ("page") of the whole set available.
+
+        A server **MAY** provide links to traverse a paginated data set ("pagination links").
+
+        Pagination links **MUST** appear in the links object that corresponds to a collection. To paginate the primary data, supply pagination links in the top-level `links` object. To paginate an included collection returned in a [compound document](https://jsonapi.org/format/1.1/#document-compound-documents), supply pagination links in the corresponding links object.
+
+        The following keys **MUST** be used for pagination links:
+        -   `first`: the first page of data
+        -   `last`: the last page of data
+        -   `prev`: the previous page of data
+        -   `next`: the next page of data
+
+        Keys **MUST** either be omitted or have a `null` value to indicate that a particular link is unavailable.
+
+        Concepts of order, as expressed in the naming of pagination links, **MUST** remain consistent with JSON:API's [sorting rules](https://jsonapi.org/format/1.1/#fetching-sorting).
+
+        The `page` [query parameter family](https://jsonapi.org/format/1.1/#query-parameters-families) is reserved for pagination. Servers and clients **SHOULD** use these parameters for pagination operations.
+
+        > Note: JSON API is agnostic about the pagination strategy used by a server, but the `page` query parameter family can be used regardless of the strategy employed. For example, a page-based strategy might use query parameters such as `page[number]` and `page[size]`, while a cursor-based strategy might use `page[cursor]`.
+
+        > Note: This section applies to any endpoint that responds with a resource collection as primary data, regardless of the request type.
+
+        JSON:API v1.1 spec: [JSON:API v1.1 - Pagination](https://jsonapi.org/format/1.1/#fetching-pagination).
+
+        > **Incompatibilities with JSON:API v1.1**
+        > - allowEmptyValue is set to "false" - not mentioned in JSON:API v1.1
+        > - allowReserved is set to "false" - JSON:API v1.1 mentions that only square brackets should be supported
+      required: false
+      allowEmptyValue: false
+      style: deepObject
+      allowReserved: false
+      schema:
+        title: '"page" query parameter family'
+        description: 'JSON:API v1.1 is agnostic about the pagination strategy used by a server, but the page query parameter family can be used regardless of the strategy employed.'
+        type: object
+        additionalProperties: true
+    relationship:
+      name: relationship
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/type'
+      description: Resource relationship name (Resource Type)
+    sort:
+      name: sort
+      in: query
+      description: |-
+        ### 8.5 Sorting
+
+        A server **MAY** choose to support requests to sort resource collections according to one or more criteria ("sort fields").
+
+        > Note: Although recommended, sort fields do not necessarily need to correspond to resource attribute and relationship names.
+
+        > Note: It is recommended that dot-separated (U+002E FULL-STOP, ".") sort fields be used to request sorting based upon relationship attributes. For example, a sort field of `author.name`could be used to request that the primary data be sorted based upon the `name` attribute of the `author` relationship.
+
+        An endpoint **MAY** support requests to sort the primary data with a `sort` query parameter. The value for `sort` **MUST** represent sort fields.
+        ```http
+        GET /people?sort=age HTTP/1.1
+        Accept: application/vnd.api+json
+        ```
+
+        An endpoint **MAY** support multiple sort fields by allowing comma-separated (U+002C COMMA, ",") sort fields. Sort fields **SHOULD** be applied in the order specified.
+        ```http
+        GET /people?sort=age,name HTTP/1.1
+        Accept: application/vnd.api+json
+        ```
+
+        The sort order for each sort field **MUST** be ascending unless it is prefixed with a minus (U+002D HYPHEN-MINUS, "-"), in which case it **MUST** be descending.
+        ```http
+        GET /articles?sort=-created,title HTTP/1.1
+        Accept: application/vnd.api+json
+        ```
+
+        The above example should return the newest articles first. Any articles created on the same date will then be sorted by their title in ascending alphabetical order.
+
+        If the server does not support sorting as specified in the query parameter `sort`, it **MUST** return `400 Bad Request`.
+
+        If sorting is supported by the server and requested by the client via query parameter `sort`, the server **MUST** return elements of the top-level `data` array of the response ordered according to the criteria specified. The server **MAY** apply default sorting rules to top-level `data` if request parameter `sort` is not specified.
+
+        > Note: This section applies to any endpoint that responds with a resource collection as primary data, regardless of the request type.
+
+        JSON:API v1.1 spec: [8.5 Sorting](https://jsonapi.org/format/1.1/#fetching-sorting)
+
+        > **Incompatibilities with JSON:API v1.1**
+        > - allowEmptyValue is set to "false" - not mentioned in JSON:API v1.1
+      required: false
+      allowEmptyValue: false
+      style: form
+      explode: false
+      allowReserved: false
+      schema:
+        title: '"sort" query parameter'
+        type: array
+        items:
+          type: string
+  requestBodies:
+    resource:
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/resource'
+      description: Example request body
+  responses:
+    resource:
+      description: Example response
+      content:
+        application/vnd.api+json:
+          schema:
+            $ref: '#/components/schemas/successDocument'
